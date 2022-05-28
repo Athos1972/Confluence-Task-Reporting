@@ -6,8 +6,7 @@ import requests
 import sys
 
 from ctr.Database.connection import SqlConnector
-from ctr.Database.model import User, Task
-from sqlalchemy import update, insert
+from ctr.Database.model import User, Task, Page
 
 
 class Wrapper:
@@ -54,8 +53,8 @@ class UserWrapper(Wrapper):
 
 class TaskWrapper(Wrapper):
 
-    def __init__(self, username, global_id, due_date, second_date, page_link, db_connection: SqlConnector = None,
-                 is_done: bool = False):
+    def __init__(self, username, global_id, page_link, page_name, task_description, db_connection: SqlConnector = None,
+                 is_done: bool = False, second_date=None, due_date=None):
         super().__init__(db_connection=db_connection)
         self.username = username
         self.global_id = global_id
@@ -63,25 +62,52 @@ class TaskWrapper(Wrapper):
         self.second_date = second_date
         self.is_done = is_done
         self.page_link = page_link
+        self.page_name = page_name
+        self.task_description = task_description
 
     def update_task_in_database(self):
         subquery_session = self.db_connection.get_session()
         found_task = self.session.query(Task).filter(Task.global_id == self.global_id)
         if found_task.count() > 0:
             # Task already exists.
+            logger.debug(f"Found entry {found_task[0].internal_id} with global_id = {self.global_id}")
             new_task = found_task[0]
         else:
+            logger.debug(f"New task with global_id = {self.global_id}.")
             new_task = Task(self.global_id)
             self.session.add(new_task)
 
-        new_task.due_date = self.due_date
-        new_task.second_date = self.second_date
+        self.session.autocommit = False
+
+        new_task.due_date = self._convert_confluence_date_to_datetime(self.due_date)
+        if self.second_date:
+            new_task.second_date = self._convert_confluence_date_to_datetime(self.second_date)
         new_task.is_done = self.is_done
-        new_task.page_link = self.page_link
-        new_task.user_id = subquery_session.query(User).filter(User.conf_name == self.username).first()
+        new_task.task_description = self.task_description
+        new_task.last_crawled = datetime.now()
+        if self.page_link:
+            new_task.page_link = subquery_session.query(Page).filter(
+                Page.page_link == self.page_link).first()
+            if not new_task.page_link:
+                # If page-Entry doesn't exist yet let's create the page
+                logger.debug(f"Page {self.page_name} was not in the database. Creating record.")
+                page = Page(page_link=self.page_link,
+                            page_name=self.page_name)
+                subquery_session.add(page)
+                subquery_session.commit()
+                new_task.page_link = page.internal_id
+            else:
+                new_task.page_link = new_task.page_link.internal_id
+                logger.debug(f"Found page {new_task.page_link} existing in database")
+        if self.username:
+            new_task.user_id = subquery_session.query(User).filter(User.conf_name == self.username).first().id
 
         self.session.commit()
         return new_task.internal_id
+
+    def _convert_confluence_date_to_datetime(self, confluence_date) -> datetime:
+        # fixme
+        return datetime.now()
 
 
 class CrawlConfluence:
@@ -137,19 +163,24 @@ class CrawlConfluence:
         :return:
         """
 
-        url = f"{self.confluence_url}/rest/inlinetasks/1/my-task-report/?pageSize={limit}&pageIndex=0"
+        url = f"{self.confluence_url}/rest/inlinetasks/1/my-task-report/"
         url_append = f"&reportParameters=%7B%22columns%22%3A%5B%22description%22%2C%22duedate%22%2C%22location" \
                      f"%22%5D%2C%22assignees%22%3A%5B%22{conf_user_name}%22%5D%2C%22creators%22%3A%5Bnull%5D" \
                      f"%2C%22status%22%3A%22incomplete%22%2C%22sortColumn%22%3A%22duedate%22%2C%22" \
                      f"reverseSort%22%3Afalse%7D"
+        logger.debug(f"Starting task-search for user {conf_user_name}.")
 
-        task_list = self.__repeated_get(url=url, limit=limit, max_entries=max_entries, start=0, start_tag="pageIndex",
-                                        limit_tag="pageSize", url_append=url_append)
+        task_list = self.__repeated_get(url=url, limit=limit, max_entries=max_entries, start=start,
+                                        start_tag="pageIndex",
+                                        limit_tag="pageSize",
+                                        url_append=url_append)
+
+        logger.debug(f"Found {len(task_list)} tasks for this user")
 
         return task_list
 
     def __repeated_get(self, url, limit, max_entries, start=0, limit_tag="limit", start_tag="start",
-                       url_append=None) -> list:
+                       url_append="") -> list:
         results_found = []
 
         found_entries = True
@@ -159,7 +190,13 @@ class CrawlConfluence:
             new_url = f'{url}?{limit_tag}={limit}&{start_tag}={start}{url_append}'
             response = self.session.get(new_url)
 
-            results_found.extend(response.json().get("results"))
+            if response.status_code < 300:
+                lJson = response.json()
+                for (k, v) in lJson.items():
+                    if isinstance(v, list):
+                        results_found.extend(v)
+            else:
+                logger.critical(f"Error when reading url {new_url}. Error was: \n{response.text}")
 
             start += limit
             if start >= max_entries:
@@ -176,6 +213,6 @@ class CrawlConfluence:
         # Dieser Aufruf funktioniert noch nicht in der Confluence-Server-Version
         # result = self.instance.get_user_details_by_username(username=conf_username,
         #                                                     expand='details.personal, details.business')
-        # Das Ergebnis diesmal als HTML. E-Mail-Addresse ist zwischen <displayableEmail>Bernhard.Buhl@wienit.at</displayableEmail>
+        # Das Ergebnis diesmal als HTML. E-Mail-Addresse ist zwischen
+        # <displayableEmail>Bernhard.Buhl@wienit.at</displayableEmail>
         return {"email": result.text[result.text.find("Email>") + 6:result.text.find("</displayableEmail>")]}
-        return result

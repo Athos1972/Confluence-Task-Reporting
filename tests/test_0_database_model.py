@@ -2,7 +2,7 @@ from ctr.Util.Util import Util
 from ctr.Util import global_config
 from ctr.Database.connection import SqlConnector
 from ctr.Database.model import CreateTableStructures
-from ctr.Database.model import User, Task
+from ctr.Database.model import User, Task, Page
 from datetime import datetime
 from random import choices
 import string
@@ -15,11 +15,39 @@ def do_init():
     return db_connection
 
 
-def test_database_model_user_initial_creation():
+def test_initial_creation_model():
     db_connection = do_init()
 
     createTables = CreateTableStructures(engine=db_connection.get_engine())
     createTables.create_table_structures()
+
+
+def test_create_initial_user():
+    db_connection = do_init()
+
+    session = db_connection.get_session()
+    q = session.query(User).filter(User.conf_name=="NBUBEV").first()
+    if q:
+        # User was already created
+        q.last_crawled = datetime.now()
+    else:
+        lUser = User(conf_name="NBUBEV", conf_userkey = "", email="", display_name="")
+        session.add(lUser)
+    session.commit()
+
+
+def test_database_model_page_initial_creation():
+    db_connection = do_init()
+
+    lNew = Page(page_link="123", page_name="123")
+    session = db_connection.get_session()
+    session.add(lNew)
+    session.commit()
+    assert lNew.internal_id > 0
+
+
+def test_database_model_user_initial_creation():
+    db_connection = do_init()
 
     lNew = User(conf_name="Franzi6", email="franzi@fritzi.com", conf_userkey="", display_name="4711",
                 last_crawled=datetime.now())
@@ -42,9 +70,10 @@ def test_database_model_task_initial_creation():
     lNew = Task(global_id=123)
     lNew.due_date = datetime.now()
     lNew.second_date = datetime.now()
-    lNew.user = session.query(User).first()
     lNew.is_done = False
     lNew.page_link = "dummydummy"
+    lNew.user = session.query(User).first()
+    lNew.page = session.query(Page).first()
 
     session.add(lNew)
     session.commit()
@@ -73,6 +102,9 @@ def test_database_model_create_more_entries_for_users(number_of_entries=100):
 
 
 if __name__ == '__main__':
+    test_initial_creation_model()
+    test_create_initial_user()
+    test_database_model_page_initial_creation()
     test_database_model_user_initial_creation()
     test_database_model_task_initial_creation()
     test_database_model_create_more_entries_for_users(100)

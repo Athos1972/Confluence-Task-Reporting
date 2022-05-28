@@ -12,6 +12,7 @@ global_config = Config()
 
 if global_config.get_config("log_dir"):
     base_path = Path(global_config.get_config("log_dir"))
+    base_path.mkdir(parents=True, exist_ok=True)
 else:
     base_path = Path.cwd()
 logFilename = base_path.joinpath(datetime.now().strftime("%Y%m%d_%H%M%S") + '.log')

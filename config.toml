@@ -1,0 +1,5 @@
+
+filename_database = "sqlite:///test.db"
+
+
+logger_name = "CONFTASK"

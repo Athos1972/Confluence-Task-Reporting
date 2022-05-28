@@ -1,5 +1,6 @@
 import toml
 import sys
+from pathlib import Path
 
 
 class Singleton(type):
@@ -18,11 +19,12 @@ class Config(metaclass=Singleton):
     """
     Globale Konfiguration aus toml-File lesen und zur Verfügung stellen. Singleton-Klasse - wird nur 1x instanziert
     """
-    def __init__(self, filename="../config.toml"):
+    def __init__(self, filename="config.toml"):
         """
 
         :param filename: Dateiname (inkl. Pfad - wenn notwendig) zur Konfigurationsdatei
         """
+        print(f"CWD = {Path.cwd()}")
         self.filename = filename
         self.config = toml.load(filename)
         if not self.config:

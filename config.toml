@@ -1,5 +1,8 @@
 
-filename_database = "sqlite:///test.db"
+filename_database = "sqlite:////users/bernhardbuhl/git/Confluence-Task-Reporting/test.db"
 
+# Full path to where the logfiles shall be stored or empty
+log_dir = "/users/bernhardbuhl/git/Confluence-Task-Reporting/logs/"
 
+# Name of the logger:
 logger_name = "CONFTASK"

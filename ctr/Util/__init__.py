@@ -1,7 +1,8 @@
 import logging
 from pathlib import Path
 from datetime import datetime
-from Util.Config import Config
+from ctr.Util.Config import Config
+import time
 import urllib3
 
 urllib3.disable_warnings()    # sollte die dämlichen SSL-Warnings in der JIRA-Test-Maschine supressen
@@ -9,7 +10,11 @@ urllib3.disable_warnings()    # sollte die dämlichen SSL-Warnings in der JIRA-T
 # Globale Variable
 global_config = Config()
 
-logFilename = Path.cwd().joinpath(datetime.now().strftime("%Y%m%d_%H%M%S") + '.log')
+if global_config.get_config("log_dir"):
+    base_path = Path(global_config.get_config("log_dir"))
+else:
+    base_path = Path.cwd()
+logFilename = base_path.joinpath(datetime.now().strftime("%Y%m%d_%H%M%S") + '.log')
 print(f"Logfile used: {logFilename}")
 
 # Bit more advanced logging
@@ -28,3 +33,17 @@ fileHandler.setFormatter(formatter)
 # add the handlers to logger
 logger.addHandler(channelHandler)
 logger.addHandler(fileHandler)
+
+
+def timeit(f):
+
+    def timed(*args, **kw):
+
+        ts = time.time()
+        result = f(*args, **kw)
+        te = time.time()
+
+        logger.info(f'func: {f.__name__} args:[{args}, {kw}] took: {te-ts:.5} sec')
+        return result
+
+    return timed

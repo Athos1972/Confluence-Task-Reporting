@@ -1,6 +1,6 @@
 from os import environ
 from dotenv import load_dotenv
-from Util import logger
+from ctr.Util import logger, global_config
 import sys
 
 
@@ -28,3 +28,7 @@ class Util:
         if not environ.get("CONF_PWD"):
             logger.critical(f"Im .env-File fehlt die Variable 'CONF_PWD'")
             sys.exit("Check log und README.MD (CONF_PWD)")
+
+        if environ.get("CONF_BASE_URL"):
+            # Übernahme von CONF_BASE_URL aus dem .env-File in die globalen Konstanten.
+            global_config.config["CONF_BASE_URL"] = environ["CONF_BASE_URL"]

@@ -1,5 +1,5 @@
-from Util.Util import Util
-from Util import global_config
+from ctr.Util.Util import Util
+from ctr.Util import global_config
 from sqlalchemy import Column
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
@@ -10,7 +10,7 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy import MetaData
 from sqlalchemy.orm import Session
-from Database.connection import SqlConnector
+from ctr.Database.connection import SqlConnector
 from datetime import datetime
 
 
@@ -20,18 +20,21 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = "conf_users"
 
-    id = Column(String(50), primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     conf_name = Column(String(100))
+    conf_userkey = Column(String(100))
+    display_name = Column(String(100))
     email = Column(String(255))
     last_crawled = Column(DateTime())
 
     def __repr__(self):
         return f"User(id={self.id!r}, Name={self.conf_name!r} E-Mail={self.email!r}"
 
-    def __init__(self, id, conf_name, email, last_crawled=None):
-        self.id = id
+    def __init__(self, conf_name, conf_userkey, email, display_name, last_crawled=None):
         self.conf_name = conf_name
+        self.conf_userkey = conf_userkey
         self.email = email
+        self.display_name = display_name
         if not last_crawled:
             self.last_crawled = datetime.strptime("1972-02-14", "%Y-%m-%d")
         else:
@@ -41,15 +44,19 @@ class User(Base):
 class Task(Base):
     __tablename__ = "tasks"
 
-    internal_id = Column(Integer, primary_key=True)
+    internal_id = Column(Integer, primary_key=True, autoincrement=True)
     global_id = Column(String(30), nullable=False)
     due_date = Column(DateTime, nullable=True)
     second_date = Column(DateTime, nullable=True)
     is_done = Column(Boolean, nullable=False)
     last_crawled = Column(DateTime(), nullable=True)
+    page_link = Column(String(50), nullable=False)
 
     user_id = Column(String(50), ForeignKey("conf_users.id"), nullable=True)
     user = relationship("User", backref="tasks")
+
+    def __init__(self, global_id = global_id):
+        self.global_id = global_id
 
 
 class CreateTableStructures:
@@ -58,18 +65,3 @@ class CreateTableStructures:
 
     def create_table_structures(self):
         Base.metadata.create_all(self.engine)
-
-
-if __name__ == '__main__':
-    Util.load_env_file()
-    engine = SqlConnector(file=global_config.get_config("filename_database"))
-
-    createTables = CreateTableStructures(engine=engine.get_engine())
-    createTables.create_table_structures()
-
-    lNew = User("franzi6", "Franzi", "franzi@fritzi.com", datetime.now())
-    lNew2 = User("fritzi6", "fritzi", "fritzi@franzi.com")
-
-    session = Session(engine.get_engine())
-    session.add_all([lNew, lNew2])
-    session.commit()

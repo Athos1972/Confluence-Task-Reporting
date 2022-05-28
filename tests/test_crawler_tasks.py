@@ -42,6 +42,11 @@ def test_task_wapper_new_task():
 
 @timeit
 def test_task_wrapper_multiple(tasks_to_create=10):
+    """
+    Create multiple tasks at once.
+    :param tasks_to_create: Number of random tasks to be created
+    :return:
+    """
     for x in 0, tasks_to_create:
         wrapper = TaskWrapper(username="", global_id=randint(1,1000000),
                               page_link="".join(choices(string.ascii_lowercase,k=15)),
@@ -52,6 +57,6 @@ def test_task_wrapper_multiple(tasks_to_create=10):
 
 
 if __name__ == '__main__':
-    # test_single_user()
+    test_tasks_for_single_user()
     test_task_wapper_new_task()
     test_task_wrapper_multiple(100)

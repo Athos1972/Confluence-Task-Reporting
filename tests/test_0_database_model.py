@@ -63,6 +63,10 @@ def test_database_model_user_initial_creation():
 
 
 def test_database_model_task_initial_creation():
+    """
+    Creates one Task on database
+    :return:
+    """
 
     db_connection = do_init()
     session = db_connection.get_session()
@@ -77,6 +81,7 @@ def test_database_model_task_initial_creation():
 
     session.add(lNew)
     session.commit()
+    assert lNew.internal_id
 
 
 @timeit

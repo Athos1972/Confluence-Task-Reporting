@@ -5,7 +5,6 @@ from ctr.Database.connection import SqlConnector
 from ctr.Database.model import User
 from sqlalchemy import desc
 
-
 if __name__ == '__main__':
     db_connection = SqlConnector()
     Util.load_env_file()
@@ -14,7 +13,7 @@ if __name__ == '__main__':
     session = db_connection.get_session()
     limit = 1
     # q = session.query(User).order_by(desc(User.last_crawled)).limit(limit)
-    q = session.query(User).filter(User.conf_name=="NBUBEV")
+    q = session.query(User).filter(User.conf_name == "NBUBEV")
     for user in q:
         tasks = crawler.crawl_tasks_for_user(user.conf_name, limit=10, max_entries=10)
         for task in tasks:

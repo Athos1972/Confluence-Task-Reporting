@@ -71,6 +71,8 @@ def test_get_single_email_for_user():
 
 
 if __name__ == '__main__':
+    # Either call via pytest or execute directly using python test_cralwer_users.py or use your IDE to execute those
+    # Tests
     test_user_crawl()
     test_user_crawl_max_users()
     test_get_single_email_for_user()

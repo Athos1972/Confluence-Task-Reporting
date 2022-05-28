@@ -16,4 +16,8 @@ class SqlConnector:
         return self.engine
 
     def get_session(self):
+        """
+        The database Session of sqlalchemy.orm.
+        :return: a new session
+        """
         return Session(self.get_engine())

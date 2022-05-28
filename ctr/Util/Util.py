@@ -5,9 +5,17 @@ import sys
 
 
 class Util:
+    """
+    Several helper methods.
+    """
 
     @staticmethod
     def get_logger(self):
+        """
+        provides the logger
+        :param self:
+        :return: logger-Instance that was initialized in Util.__init__.py
+        """
         return logger
 
     @staticmethod

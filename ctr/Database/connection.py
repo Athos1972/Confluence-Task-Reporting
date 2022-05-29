@@ -1,6 +1,8 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from ctr.Util import global_config
+from ctr.Util import global_config, logger
+from ctr.Database.model import CreateTableStructures
+from pathlib import Path
 
 
 class SqlConnector:
@@ -8,11 +10,18 @@ class SqlConnector:
         self.engine = None
         if not file:
             file = global_config.get_config("filename_database", optional=False)
-        self.file = file
+        self.file = str(file)
 
     def get_engine(self, *args, **kwargs):
         if not self.engine:
+            # Check, if the database exists already
+            file_exists = Path(self.file.replace("sqlite:///", "")).exists()
             self.engine = create_engine(self.file, echo=kwargs.get("echo", False), future=True)
+            if not file_exists:
+                logger.warning(f"File {self.file} did not exist. Now creating database structures.")
+                creator = CreateTableStructures(self.engine)
+                creator.create_table_structures()
+
         return self.engine
 
     def get_session(self):

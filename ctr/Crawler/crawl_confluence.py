@@ -35,6 +35,7 @@ class Wrapper:
         if not self.crawl_confluence:
             self.crawl_confluence = CrawlConfluence()
 
+
 class UserWrapper(Wrapper):
     def __init__(self, confluence_name, confluence_userkey=None, email=None, display_name=None,
                  db_connection: SqlConnector = None):
@@ -98,8 +99,17 @@ class TaskWrapper(Wrapper):
         new_task.is_done = self.is_done
         new_task.task_description = self.task_description
         new_task.last_crawled = datetime.now()
+
         if self.username:
-            new_task.user_id = subquery_session.query(User).filter(User.conf_name == self.username).first().id
+            try:
+                user = subquery_session.query(User).filter(User.conf_name == self.username).first()
+                new_task.user_id = user.id
+                user.tasks_last_crawled = datetime.now()
+                subquery_session.commit()
+            except AttributeError:  # User doesn't exist in Database?!
+                logger.critical(f"User {self.username} does not exist in local database. Weird!")
+                self.session.rollback()
+                return None
 
         self.session.commit()
         return new_task.internal_id
@@ -116,7 +126,7 @@ class TaskWrapper(Wrapper):
         :param subquery_session: Just a session
         :return:
         """
-        self.page_link = self.page_link[:self.page_link.find("focusedTaskId=")-1]
+        self.page_link = self.page_link[:self.page_link.find("focusedTaskId=") - 1]
         new_task.page_link = subquery_session.query(Page).filter(
             Page.page_link == self.page_link).first()
         if not new_task.page_link:
@@ -149,26 +159,33 @@ class TaskWrapper(Wrapper):
 
         if "viewpage.action" in page.page_link:
             # link looks like: <conf_base>/vieplage.action?pageId=<page_id>
-            page.page_id = page.page_link[page.page_link.find("=")+1:]
+            # check in other installations: This call looks to take at least twice as long as the call via requests
+            # (in the else-Clause) even though we say "expand=None".
+            page.page_id = page.page_link[page.page_link.find("=") + 1:]
             page_details = self.confluence_instance.get_page_by_id(page_id=page.page_id, expand=None)
-            page.space = page_details.get("space").get("key")
+            page.space = page_details["space"].get("key")
         else:
-            # FIXME: Here we should add a header-directive to session-object to only transmit the first 10000 characters
+            # Here we should add a header-directive to session-object to only transmit the first 10000 characters
             self._get_confluence_crawler_instance()
             result = self.crawl_confluence.get_confluence_page_via_requests(page.page_link)
             # Get the unique page-id from HTML:
-            search_string = '"ajs-page-id" content="'
-            start_pos = result.text.find(search_string)+len(search_string)
-            end_pos = result.text.find('"', start_pos)
-            page.page_id = result.text[start_pos:end_pos]
-            # And as we've already read the beast also get the space key
-            search_string = '"ajs-space-key" content="'
-            start_pos = result.text.find(search_string) + len(search_string)
-            end_pos = result.text.find('"', start_pos)
-            page.space = result.text[start_pos:end_pos]
-            page_details = 1
+            page.page_id = self.__find_ajs_values_in_string("ajs-page-id", result.text)
+            page.space = self.__find_ajs_values_in_string("ajs-space-key", result.text)
 
         return page
+
+    @staticmethod
+    def __find_ajs_values_in_string(search_string, base_string):
+        """
+        Extract values of ajs-xxx-yyyy-Fields in HTML-Header
+        :param search_string: a string like ajs-space-key
+        :param base_string: the response from the url-call (
+        :return: the value of the requested field
+        """
+        search_string = f'"{search_string}" content="'
+        start_pos = base_string.find(search_string) + len(search_string)
+        end_pos = base_string.find('"', start_pos)
+        return base_string[start_pos:end_pos]
 
     @staticmethod
     def _convert_confluence_due_date_to_datetime(confluence_date) -> datetime:
@@ -178,7 +195,10 @@ class TaskWrapper(Wrapper):
         :return:
         """
         if isinstance(confluence_date, str):
-            return datetime.strptime(confluence_date, "%d %b %Y")
+            try:
+                return datetime.strptime(confluence_date, "%d %b %Y")  # Month as abbrevation
+            except ValueError:
+                return datetime.strptime(confluence_date, "%d %B %Y")  # Month fully written
         else:
             return confluence_date
 
@@ -262,17 +282,30 @@ class CrawlConfluence:
 
     def __repeated_get(self, url, limit, max_entries, start=0, limit_tag="limit", start_tag="start",
                        url_append="") -> list:
+        """
+        Reads from a paged URL until weither max_entries is reached or no more entries can be found.
+        :param url: the base URL (without ?<limit_tag>=<limit>&<start_tag>=<start>
+        :param limit: the number of records that are requested from the server
+        :param max_entries: Up to how many records we should retrieve
+        :param start: from which position (usually that would be 0!)
+        :param limit_tag: what's the name of the limit-tag for this URL, e.g. limit, pageSize
+        :param start_tag: what's the name of the start-tag for this URL, e.g. start, pageIndex
+        :param url_append: any further parameters to be passed to the server (including leading "&"!)
+        :return: List of gathered Response-Entries
+        """
         results_found = []
-
         found_entries = True
-        if not start:
-            start = 0
+
         while found_entries:
             new_url = f'{url}?{limit_tag}={limit}&{start_tag}={start}{url_append}'
             response = self.session.get(new_url)
 
             if response.status_code < 300:
                 lJson = response.json()
+                # OK. That's a keen assumption but works so far: in the Respons there is only ONE List-Object. Calleer
+                # is interested in all entries from this list-object.
+                # E.g. when we call URL to list Users or Pages the name of the list (= "k") might be "Users" or "Pages"
+                # while we find the list in "v". We add all entries from this list (usually dict's) to results_found
                 for (k, v) in lJson.items():
                     if isinstance(v, list):
                         results_found.extend(v)
@@ -280,11 +313,12 @@ class CrawlConfluence:
                 logger.critical(f"Error when reading url {new_url}. Error was: \n{response.text}")
 
             start += limit
-            if start >= max_entries:
+            if start >= max_entries:  # Exit when we received max_entries entries.
                 found_entries = False
 
             if response.status_code != 200:
-                logger.debug(f"Statuscode: {response.status_code} für URL {new_url}")
+                logger.debug(f"Statuscode: {response.status_code} für URL {new_url} "
+                             f"(most probably OK when we found all entries!)")
                 found_entries = False
 
         return results_found

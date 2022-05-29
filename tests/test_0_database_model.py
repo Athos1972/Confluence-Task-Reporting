@@ -7,39 +7,38 @@ from datetime import datetime
 from random import choices
 import string
 from ctr.Util import logger, timeit
+from pathlib import Path
 
-
-def do_init():
-    Util.load_env_file()
-    db_connection = SqlConnector(file=global_config.get_config("filename_database"))
-    return db_connection
+Util.load_env_file()
+db_connection = SqlConnector(file=f"sqlite:///{Path.cwd().joinpath('testdatabase.db')}")
+session = db_connection.get_session()
 
 
 def test_initial_creation_model():
-    db_connection = do_init()
 
     createTables = CreateTableStructures(engine=db_connection.get_engine())
     createTables.create_table_structures()
 
 
 def test_create_initial_user():
-    db_connection = do_init()
+    start_of_test = datetime.now()
 
-    session = db_connection.get_session()
     q = session.query(User).filter(User.conf_name=="NBUBEV").first()
     if q:
         # User was already created
         q.last_crawled = datetime.now()
     else:
-        lUser = User(conf_name="NBUBEV", conf_userkey = "", email="", display_name="")
-        session.add(lUser)
+        q = User(conf_name="NBUBEV", conf_userkey = "", email="", display_name="")
+        session.add(q)
     session.commit()
+    assert q.last_crawled > start_of_test
 
 
 def test_database_model_page_initial_creation():
-    db_connection = do_init()
 
     lNew = Page(page_link="123", page_name="123")
+    lNew.page_id = 1234123
+    lNew.space = "franzi"
     session = db_connection.get_session()
     session.add(lNew)
     session.commit()
@@ -47,13 +46,11 @@ def test_database_model_page_initial_creation():
 
 
 def test_database_model_user_initial_creation():
-    db_connection = do_init()
 
-    lNew = User(conf_name="Franzi6", email="franzi@fritzi.com", conf_userkey="", display_name="4711",
+    lNew = User(conf_name="Testfranzi", email="franzi@fritzi.com", conf_userkey="", display_name="4711",
                 last_crawled=datetime.now())
-    lNew2 = User(conf_name="fritzi8", email="fritzi@franzi.com", conf_userkey="", display_name="0815")
+    lNew2 = User(conf_name="Testfritzi", email="fritzi@franzi.com", conf_userkey="", display_name="0815")
 
-    session = db_connection.get_session()
     session.add_all([lNew, lNew2])
     try:
         session.commit()
@@ -67,9 +64,6 @@ def test_database_model_task_initial_creation():
     Creates one Task on database
     :return:
     """
-
-    db_connection = do_init()
-    session = db_connection.get_session()
 
     lNew = Task(global_id=123)
     lNew.due_date = datetime.now()
@@ -86,7 +80,6 @@ def test_database_model_task_initial_creation():
 
 @timeit
 def test_database_model_create_more_entries_for_users(number_of_entries=100):
-    db_connection = do_init()
 
     x = 0
     users_to_add = []
@@ -97,7 +90,6 @@ def test_database_model_create_more_entries_for_users(number_of_entries=100):
                                  email="dummy"))
         x += 1
 
-    session = db_connection.get_session()
     session.add_all(users_to_add)
     session.commit()
     tuple_of_ids = [x.id for x in users_to_add]

@@ -7,6 +7,7 @@ from sqlalchemy import Boolean
 from sqlalchemy import func
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship
+from sqlalchemy.ext.hybrid import hybrid_property
 from datetime import datetime
 
 Base = declarative_base()
@@ -27,6 +28,7 @@ class User(Base):
     display_name = Column(String(100), nullable=True)
     email = Column(String(255), nullable=True)  # Might be filled in later!
     last_crawled = Column(DateTime(), onupdate=func.now(), nullable=True)
+    tasks_last_crawled = Column(DateTime(), nullable=True)
 
     def __repr__(self):
         return f"User(id={self.id!r}, Name={self.conf_name!r} E-Mail={self.email!r}"
@@ -37,6 +39,12 @@ class User(Base):
         self.email = email
         self.display_name = display_name
         self.last_crawled = last_crawled
+
+    @hybrid_property
+    def company_name(self):
+        if not self.email:
+            return None
+        return self.email.split["@"][1].split(".")[0]
 
 
 class Task(Base):
@@ -79,7 +87,7 @@ class Page(Base):
         self.last_crawled = datetime.now()
 
     def __repr__(self):
-        return f'Name: {self.page_name!r}'
+        return f'Name: {self.page_name!r}, ID: {self.page_id}'
 
 
 class CreateTableStructures:

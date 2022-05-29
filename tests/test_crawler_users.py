@@ -4,14 +4,15 @@ from ctr.Database.connection import SqlConnector
 from ctr.Database.model import User
 from datetime import datetime
 from random import choices
+from pathlib import Path
 import string
 
 from ctr.Util.Util import Util
 
 Util.load_env_file()
 test_instance = CrawlConfluence()
-db_connector = SqlConnector()
-session = db_connector.get_session()
+db_connection = SqlConnector(file=f"sqlite:///{Path.cwd().joinpath('testdatabase.db')}")
+session = db_connection.get_session()
 
 
 def test_user_crawl():
@@ -40,7 +41,7 @@ def test_user_wrapper_exists():
 
     time_before_execution = datetime.now()
     q = session.query(User.conf_name).first()
-    wrapper = UserWrapper(confluence_name=q["conf_name"])
+    wrapper = UserWrapper(confluence_name=q["conf_name"], db_connection=db_connection)
     wrapper.update_user_in_database()
     q = session.query(User.last_crawled).first()
     assert q[0] > time_before_execution
@@ -55,7 +56,8 @@ def test_user_wrapper_new_user():
     wrapper = UserWrapper(confluence_name=rand_user_name,
                           confluence_userkey="123",
                           display_name="123test",
-                          email="dummy")
+                          email="dummy",
+                          db_connection=db_connection)
     wrapper.update_user_in_database()
     q = session.query(User.conf_name).filter(User.conf_name == rand_user_name)
     assert q.count() == 1

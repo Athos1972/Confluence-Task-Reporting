@@ -2,6 +2,7 @@ from atlassian import Confluence
 from ctr.Util import global_config, logger
 from os import environ
 from datetime import datetime
+from ctr.Util import timeit
 import requests
 import sys
 
@@ -17,10 +18,22 @@ class Wrapper:
             self.db_connection = db_connection
         try:
             self.session = self.db_connection.get_session()
+            self.session.autocommit = False
         except AttributeError as ex:
             logger.critical(f"Problem getting a Session. Problem: {ex}")
             sys.exit("Problem with session. Check logs or check .env-File, PYTHONPATH, etc.")
+        self.crawl_confluence = None
+        self.confluence_instance = None
 
+    def _get_confuence_instance(self):
+        if not self.confluence_instance:
+            self.confluence_instance = Confluence(url=global_config.get_config("CONF_BASE_URL"),
+                                                  username=environ.get("CONF_USER"),
+                                                  password=environ.get("CONF_PWD"))
+
+    def _get_confluence_crawler_instance(self):
+        if not self.crawl_confluence:
+            self.crawl_confluence = CrawlConfluence()
 
 class UserWrapper(Wrapper):
     def __init__(self, confluence_name, confluence_userkey=None, email=None, display_name=None,
@@ -75,39 +88,99 @@ class TaskWrapper(Wrapper):
         else:
             logger.debug(f"New task with global_id = {self.global_id}.")
             new_task = Task(self.global_id)
+            new_task = self._add_pagelink_from_task(new_task, subquery_session)
             self.session.add(new_task)
 
-        self.session.autocommit = False
-
-        new_task.due_date = self._convert_confluence_date_to_datetime(self.due_date)
+        # These attributes may have changed since last crawl:
+        new_task.due_date = self._convert_confluence_due_date_to_datetime(self.due_date)
         if self.second_date:
-            new_task.second_date = self._convert_confluence_date_to_datetime(self.second_date)
+            new_task.second_date = self._convert_confluence_due_date_to_datetime(self.second_date)
         new_task.is_done = self.is_done
         new_task.task_description = self.task_description
         new_task.last_crawled = datetime.now()
-        if self.page_link:
-            new_task.page_link = subquery_session.query(Page).filter(
-                Page.page_link == self.page_link).first()
-            if not new_task.page_link:
-                # If page-Entry doesn't exist yet let's create the page
-                logger.debug(f"Page {self.page_name} was not in the database. Creating record.")
-                page = Page(page_link=self.page_link,
-                            page_name=self.page_name)
-                subquery_session.add(page)
-                subquery_session.commit()
-                new_task.page_link = page.internal_id
-            else:
-                new_task.page_link = new_task.page_link.internal_id
-                logger.debug(f"Found page {new_task.page_link} existing in database")
         if self.username:
             new_task.user_id = subquery_session.query(User).filter(User.conf_name == self.username).first().id
 
         self.session.commit()
         return new_task.internal_id
 
-    def _convert_confluence_date_to_datetime(self, confluence_date) -> datetime:
-        # fixme
-        return datetime.now()
+    def _add_pagelink_from_task(self, new_task, subquery_session):
+        """
+        the link looks like that: https://<conf-base-url>/display/<page_name>?focusedTaskId=xx
+        or like that https://<conf_base_url>/viepage.action?pageId=<page_id>?focusedTaskId=xx
+
+        We remove the ?focusedTaskId=xx from the url and search for that page in the databas. Add, if not there.
+        Otherwise just set the remote-link to the Page entry into the Task-record
+
+        :param new_task: Reference to Task-Instance
+        :param subquery_session: Just a session
+        :return:
+        """
+        self.page_link = self.page_link[:self.page_link.find("focusedTaskId=")-1]
+        new_task.page_link = subquery_session.query(Page).filter(
+            Page.page_link == self.page_link).first()
+        if not new_task.page_link:
+            # If page-Entry doesn't exist yet let's create the page
+            logger.debug(f"Page {self.page_name} was not in the database. Creating record.")
+            page = Page(page_link=self.page_link,
+                        page_name=self.page_name)
+            page = self.get_space_from_pagelink(page)
+            subquery_session.add(page)
+            subquery_session.commit()
+            new_task.page_link = page.internal_id
+        else:
+            new_task.page_link = new_task.page_link.internal_id
+            logger.debug(f"Found page {new_task.page_link} existing in database")
+        return new_task
+
+    @timeit
+    def get_space_from_pagelink(self, page: Page):
+        """
+        Searches in Confluence for further details of the page - namely the Space, that this page is stored in
+        :param page: Page-Instance
+        :return: nothing
+        """
+
+        if page.space:
+            return
+
+        if not self.confluence_instance:
+            self._get_confuence_instance()
+
+        if "viewpage.action" in page.page_link:
+            # link looks like: <conf_base>/vieplage.action?pageId=<page_id>
+            page.page_id = page.page_link[page.page_link.find("=")+1:]
+            page_details = self.confluence_instance.get_page_by_id(page_id=page.page_id, expand=None)
+            page.space = page_details.get("space").get("key")
+        else:
+            # FIXME: Here we should add a header-directive to session-object to only transmit the first 10000 characters
+            self._get_confluence_crawler_instance()
+            result = self.crawl_confluence.get_confluence_page_via_requests(page.page_link)
+            # Get the unique page-id from HTML:
+            search_string = '"ajs-page-id" content="'
+            start_pos = result.text.find(search_string)+len(search_string)
+            end_pos = result.text.find('"', start_pos)
+            page.page_id = result.text[start_pos:end_pos]
+            # And as we've already read the beast also get the space key
+            search_string = '"ajs-space-key" content="'
+            start_pos = result.text.find(search_string) + len(search_string)
+            end_pos = result.text.find('"', start_pos)
+            page.space = result.text[start_pos:end_pos]
+            page_details = 1
+
+        return page
+
+    @staticmethod
+    def _convert_confluence_due_date_to_datetime(confluence_date) -> datetime:
+        """
+        Confluence date comes as dd month year
+        :param confluence_date:
+        :return:
+        """
+        if isinstance(confluence_date, str):
+            return datetime.strptime(confluence_date, "%d %b %Y")
+        else:
+            return confluence_date
 
 
 class CrawlConfluence:
@@ -118,6 +191,14 @@ class CrawlConfluence:
         self.session = requests.Session()
         self.session.auth = (environ.get("CONF_USER"), environ.get("CONF_PWD"))
         self.confluence_url = global_config.get_config('CONF_BASE_URL', optional=False)
+
+    def get_confluence_page_via_requests(self, page_name):
+        """
+
+        :param page_name:
+        :return: Response from Session
+        """
+        return self.session.get(f'{self.confluence_url}/{page_name}')
 
     def crawl_users(self, limit=10, max_entries=100, start=0):
         """

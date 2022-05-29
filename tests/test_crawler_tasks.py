@@ -32,7 +32,7 @@ def test_task_wapper_new_task():
 
     wrapper = TaskWrapper(username="NBUBEV",
                           global_id=123,
-                          due_date=datetime.now(),
+                          due_date="15 February 2022",
                           page_name="Franziska 4711",
                           task_description="123",
                           page_link="123")

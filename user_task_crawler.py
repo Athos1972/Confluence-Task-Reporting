@@ -15,7 +15,7 @@ if __name__ == '__main__':
     # q = session.query(User).order_by(desc(User.last_crawled)).limit(limit)
     q = session.query(User).filter(User.conf_name == "NBUBEV")
     for user in q:
-        tasks = crawler.crawl_tasks_for_user(user.conf_name, limit=10, max_entries=10)
+        tasks = crawler.crawl_tasks_for_user(user.conf_name, limit=10, max_entries=10, start=0)
         for task in tasks:
             wrapper = TaskWrapper(username=user.conf_name, global_id=task['globalId'],
                                   page_link=task['pageUrl'],

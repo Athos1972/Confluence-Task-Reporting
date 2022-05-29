@@ -17,6 +17,7 @@ class ModelDoku:
     This file holds the sqlalchemy-Model. Basically the tables and the fields and a bit of Alchemy.
     """
 
+
 class User(Base):
     __tablename__ = "conf_users"
 
@@ -68,6 +69,7 @@ class Page(Base):
     internal_id = Column(Integer, primary_key=True, autoincrement=True)
     page_link = Column(String(100), nullable=False)
     page_name = Column(String(200), nullable=False)
+    page_id = Column(Integer, nullable=True)
     space = Column(String(50), nullable=True)  # True because Space is not known during initial creation.
     last_crawled = Column(DateTime, onupdate=func.now(), nullable=False)
 

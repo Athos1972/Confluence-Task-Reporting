@@ -74,5 +74,6 @@ def test_task_wrapper_multiple(tasks_to_create=10):
 
 if __name__ == '__main__':
     test_tasks_for_single_user()
-    test_task_wapper_new_task()
+    test_task_wapper_new_task_long_date()
+    test_task_wapper_new_task_short_date()
     test_task_wrapper_multiple(100)

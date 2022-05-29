@@ -5,6 +5,8 @@ from datetime import datetime
 from ctr.Util import timeit
 import requests
 import sys
+from bs4 import BeautifulSoup
+from time import sleep
 
 from ctr.Database.connection import SqlConnector
 from ctr.Database.model import User, Task, Page
@@ -100,6 +102,8 @@ class TaskWrapper(Wrapper):
         new_task.task_description = self.task_description
         new_task.last_crawled = datetime.now()
 
+        new_task = self._derive_attributes_from_task_description(new_task)
+
         if self.username:
             try:
                 user = subquery_session.query(User).filter(User.conf_name == self.username).first()
@@ -113,6 +117,37 @@ class TaskWrapper(Wrapper):
 
         self.session.commit()
         return new_task.internal_id
+
+    def _derive_attributes_from_task_description(self, new_task: Task):
+        """
+        Derive additional attributes of this task by parsing the HTML of the task description and parsing values.
+
+        :param new_task: current status of new_task (with description filled)
+        :return: Updated new_task
+        """
+        description_shortened = new_task.task_description
+
+        if "\r" in description_shortened:
+            description_shortened = description_shortened[:description_shortened.find("\r")]
+        if "<br/>" in description_shortened:
+            description_shortened = description_shortened[:description_shortened.find("<br/>")]
+        if "<br />" in description_shortened:
+            description_shortened = description_shortened[:description_shortened.find("<br />")]
+
+        soup = BeautifulSoup(description_shortened, features="html.parser")
+        new_task.second_date = self.__find_second_date_value_from_task_description(soup=soup)
+        return new_task
+
+    def __find_second_date_value_from_task_description(self, soup: BeautifulSoup):
+        """
+        Searches for second datetime-attribute in confluence (HTML)-Task
+        :param soup:
+        :return:
+        """
+        x = soup.find_all("time")
+        if len(x) > 1:
+            return datetime.strptime(x[1].attrs["datetime"], "%Y-%m-%d")
+        return None
 
     def _add_pagelink_from_task(self, new_task, subquery_session):
         """
@@ -211,6 +246,9 @@ class CrawlConfluence:
         self.session = requests.Session()
         self.session.auth = (environ.get("CONF_USER"), environ.get("CONF_PWD"))
         self.confluence_url = global_config.get_config('CONF_BASE_URL', optional=False)
+        # In case you want to not strain system performance too much you can add sleep-duration in seconds in config
+        self.sleep_between_tasks = global_config.get_config('sleep_between_crawl_tasks', default_value=0)
+
 
     def get_confluence_page_via_requests(self, page_name):
         """
@@ -218,19 +256,23 @@ class CrawlConfluence:
         :param page_name:
         :return: Response from Session
         """
+        sleep(self.sleep_between_tasks)
         return self.session.get(f'{self.confluence_url}/{page_name}')
 
     def crawl_users(self, limit=10, max_entries=100, start=0):
         """
-
-        :return:
+        Get a List of Users from Confluence. Then read additional details for each user.
+        :return: List of Confluence-Users as dict.
         """
         url = f"{self.confluence_url}/rest/api/group/confluence-users/member"
 
         current_confluence_users = self.__repeated_get(url, limit=limit, max_entries=max_entries, start=start)
 
         for single_user in current_confluence_users:
+            # Attributes like E-Mail-Address are not expandable/received in the member-API-Call, so we must call
+            # again (this time for each user) to receive those details.
             conf_details = self.read_userdetails_for_user(single_user["username"])
+            sleep(self.sleep_between_tasks)
             for k, v in conf_details.items():
                 single_user[k] = v
 
@@ -320,6 +362,8 @@ class CrawlConfluence:
                 logger.debug(f"Statuscode: {response.status_code} für URL {new_url} "
                              f"(most probably OK when we found all entries!)")
                 found_entries = False
+
+            sleep(self.sleep_between_tasks)
 
         return results_found
 

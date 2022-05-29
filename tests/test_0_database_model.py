@@ -56,7 +56,7 @@ def test_database_model_user_initial_creation():
         session.commit()
     except Exception as ex:
         logger.info(f"Error from Test was {ex}")
-    assert session.query(User.conf_name).filter(User.conf_name=="Franzi6").count() > 0
+    assert session.query(User.conf_name).filter(User.conf_name=="Testfranzi").count() > 0
 
 
 def test_database_model_task_initial_creation():
@@ -76,6 +76,26 @@ def test_database_model_task_initial_creation():
     session.add(lNew)
     session.commit()
     assert lNew.internal_id
+
+
+def test_task_has_second_date_attribute():
+    x = session.query(Task).filter(Task.global_id==123, Task.second_date)
+    assert x[0].has_second_date == True
+
+
+def test_task_has_second_date_attribute_false():
+    task = Task(global_id=124)
+    task.is_done = False
+    task.page_link = "4711"
+    session.add(task)
+    session.commit()
+    x = session.query(Task).filter(Task.global_id == 124)
+    assert x[0].has_second_date == False
+
+
+def test_user_company_from_email():
+    user = User("franzi", "fritzi", "fritzi@franzi.com", "semmal")
+    assert user.company_name == "franzi"
 
 
 @timeit
@@ -101,6 +121,9 @@ def test_database_model_create_more_entries_for_users(number_of_entries=100):
 if __name__ == '__main__':
     test_initial_creation_model()
     test_create_initial_user()
+    test_task_has_second_date_attribute()
+    test_task_has_second_date_attribute_false()
+    test_user_company_from_email()
     test_database_model_page_initial_creation()
     test_database_model_user_initial_creation()
     test_database_model_task_initial_creation()

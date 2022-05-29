@@ -9,6 +9,7 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
 from datetime import datetime
+from ctr.Util import logger
 
 Base = declarative_base()
 
@@ -44,7 +45,11 @@ class User(Base):
     def company_name(self):
         if not self.email:
             return None
-        return self.email.split["@"][1].split(".")[0]
+        try:
+            return self.email.split("@")[1].split(".")[0]
+        except Exception as ex:
+            logger.exception(f"Deriving company_name from E-Mail failed. Error was {ex}")
+            return None
 
 
 class Task(Base):
@@ -53,7 +58,7 @@ class Task(Base):
     internal_id = Column(Integer, primary_key=True, autoincrement=True)
     global_id = Column(String(30), nullable=False)
     due_date = Column(DateTime, nullable=True)
-    second_date = Column(DateTime, nullable=True)
+    second_date = Column(DateTime, nullable=True,)
     is_done = Column(Boolean, nullable=False)
     last_crawled = Column(DateTime(), onupdate=func.now(), nullable=True)
     task_description = Column(String(), nullable=True)
@@ -69,6 +74,12 @@ class Task(Base):
 
     def __repr__(self):
         return f"Int.ID={self.internal_id!r}, global_id={self.global_id!r}"
+
+    @hybrid_property
+    def has_second_date(self):
+        if self.second_date:
+            return True
+        return False
 
 
 class Page(Base):

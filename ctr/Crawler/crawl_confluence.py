@@ -138,7 +138,8 @@ class TaskWrapper(Wrapper):
         new_task.second_date = self.__find_second_date_value_from_task_description(soup=soup)
         return new_task
 
-    def __find_second_date_value_from_task_description(self, soup: BeautifulSoup):
+    @staticmethod
+    def __find_second_date_value_from_task_description(soup: BeautifulSoup):
         """
         Searches for second datetime-attribute in confluence (HTML)-Task
         :param soup:
@@ -249,7 +250,6 @@ class CrawlConfluence:
         # In case you want to not strain system performance too much you can add sleep-duration in seconds in config
         self.sleep_between_tasks = global_config.get_config('sleep_between_crawl_tasks', default_value=0)
 
-
     def get_confluence_page_via_requests(self, page_name):
         """
 
@@ -264,7 +264,7 @@ class CrawlConfluence:
         Get a List of Users from Confluence. Then read additional details for each user.
         :return: List of Confluence-Users as dict.
         """
-        logger.debug(f"Starting to crawl max {max_entries} Users in slices of {limit}.")
+        logger.debug(f"Starting to crawl max {max_entries} Users in slices of {limit}. Start from {start}")
         url = f"{self.confluence_url}/rest/api/group/confluence-users/member"
 
         current_confluence_users = self.__repeated_get(url, limit=limit, max_entries=max_entries, start=start)
@@ -340,6 +340,7 @@ class CrawlConfluence:
         results_found = []
         found_entries = True
         original_start_number = start
+        lJson = ""
 
         while found_entries:
             new_url = f'{url}?{limit_tag}={limit}&{start_tag}={start}{url_append}'
@@ -353,21 +354,21 @@ class CrawlConfluence:
                 # while we find the list in "v". We add all entries from this list (usually dict's) to results_found
                 for (k, v) in lJson.items():
                     if isinstance(v, list):
+                        logger.debug(f"Received {len(v)} entries from server.")
                         results_found.extend(v)
+                sleep(self.sleep_between_tasks)
             else:
                 logger.critical(f"Error when reading url {new_url}. Error was: \n{response.text}")
 
             start += limit
-            if start >= (max_entries-original_start_number):  # Exit when we received max_entries entries.
+            if start >= (max_entries+original_start_number):
+                # Exit when we received max_entries entries (+ Start-value ;-) )
                 break
 
             if response.status_code != 200:
                 logger.debug(f"Statuscode: {response.status_code} für URL {new_url} "
                              f"(most probably OK when we found all entries!)")
                 break
-
-            logger.debug(f"Received {len(lJson.items())} entries from server.")
-            sleep(self.sleep_between_tasks)
 
         return results_found
 

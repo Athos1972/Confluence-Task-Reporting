@@ -60,6 +60,7 @@ class Task(Base):
     due_date = Column(DateTime, nullable=True)
     second_date = Column(DateTime, nullable=True,)
     is_done = Column(Boolean, nullable=False)
+    first_seen = Column(DateTime(), default=func.now())
     last_crawled = Column(DateTime(), onupdate=func.now(), nullable=True)
     task_description = Column(String(), nullable=True)
 

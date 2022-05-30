@@ -264,6 +264,7 @@ class CrawlConfluence:
         Get a List of Users from Confluence. Then read additional details for each user.
         :return: List of Confluence-Users as dict.
         """
+        logger.debug(f"Starting to crawl max {max_entries} Users in slices of {limit}.")
         url = f"{self.confluence_url}/rest/api/group/confluence-users/member"
 
         current_confluence_users = self.__repeated_get(url, limit=limit, max_entries=max_entries, start=start)
@@ -271,6 +272,7 @@ class CrawlConfluence:
         for single_user in current_confluence_users:
             # Attributes like E-Mail-Address are not expandable/received in the member-API-Call, so we must call
             # again (this time for each user) to receive those details.
+            logger.debug(f"Getting further details for user {single_user['username']}")
             conf_details = self.read_userdetails_for_user(single_user["username"])
             sleep(self.sleep_between_tasks)
             for k, v in conf_details.items():
@@ -337,6 +339,7 @@ class CrawlConfluence:
         """
         results_found = []
         found_entries = True
+        original_start_number = start
 
         while found_entries:
             new_url = f'{url}?{limit_tag}={limit}&{start_tag}={start}{url_append}'
@@ -355,20 +358,25 @@ class CrawlConfluence:
                 logger.critical(f"Error when reading url {new_url}. Error was: \n{response.text}")
 
             start += limit
-            if start >= max_entries:  # Exit when we received max_entries entries.
-                found_entries = False
+            if start >= (max_entries-original_start_number):  # Exit when we received max_entries entries.
+                break
 
             if response.status_code != 200:
                 logger.debug(f"Statuscode: {response.status_code} für URL {new_url} "
                              f"(most probably OK when we found all entries!)")
-                found_entries = False
+                break
 
+            logger.debug(f"Received {len(lJson.items())} entries from server.")
             sleep(self.sleep_between_tasks)
 
         return results_found
 
     def read_userdetails_for_user(self, conf_username):
-        result = self.session.get(f"{self.confluence_url}/rest/prototype/1/user/non-system/{conf_username}")
+        try:
+            result = self.session.get(f"{self.confluence_url}/rest/prototype/1/user/non-system/{conf_username}")
+        except ConnectionError as ex:
+            logger.error(f"Connection-Error during fetching user-details of user {conf_username}: {ex}")
+            return {}
         # Dieser Aufruf funktioniert noch nicht in der Confluence-Server-Version
         # result = self.instance.get_user_details_by_username(username=conf_username,
         #                                                     expand='details.personal, details.business')

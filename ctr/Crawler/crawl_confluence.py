@@ -356,9 +356,13 @@ class CrawlConfluence:
                     if isinstance(v, list):
                         logger.debug(f"Received {len(v)} entries from server.")
                         results_found.extend(v)
+                        if not v:
+                            found_entries = False
+                        break
                 sleep(self.sleep_between_tasks)
             else:
                 logger.critical(f"Error when reading url {new_url}. Error was: \n{response.text}")
+                break
 
             start += limit
             if start >= (max_entries+original_start_number):

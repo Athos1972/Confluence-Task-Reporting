@@ -57,6 +57,7 @@ class Task(Base):
 
     internal_id = Column(Integer, primary_key=True, autoincrement=True)
     global_id = Column(String(30), nullable=False)
+    task_id = Column(Integer, nullable=False)  # TaskId auf dieser Seite
     due_date = Column(DateTime, nullable=True)
     second_date = Column(DateTime, nullable=True,)
     is_done = Column(Boolean, nullable=False)

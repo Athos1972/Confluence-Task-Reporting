@@ -20,6 +20,7 @@ if __name__ == '__main__':
             wrapper = TaskWrapper(username=user.conf_name, global_id=task['globalId'],
                                   page_link=task['pageUrl'],
                                   page_name=task['pageTitle'],
+                                  task_id=task['taskId'],
                                   task_description=task['taskHtml'],
                                   is_done=task['taskCompleted'],
                                   due_date=task['dueDate'])

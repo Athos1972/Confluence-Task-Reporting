@@ -69,11 +69,12 @@ class UserWrapper(Wrapper):
 
 class TaskWrapper(Wrapper):
 
-    def __init__(self, username, global_id, page_link, page_name, task_description, db_connection: SqlConnector = None,
+    def __init__(self, username, global_id, task_id, page_link, page_name, task_description, db_connection: SqlConnector = None,
                  is_done: bool = False, second_date=None, due_date=None):
         super().__init__(db_connection=db_connection)
         self.username = username
         self.global_id = global_id
+        self.task_id = task_id
         self.due_date = due_date
         self.second_date = second_date
         self.is_done = is_done
@@ -100,6 +101,7 @@ class TaskWrapper(Wrapper):
             new_task.second_date = self._convert_confluence_due_date_to_datetime(self.second_date)
         new_task.is_done = self.is_done
         new_task.task_description = self.task_description
+        new_task.task_id = self.task_id
         new_task.last_crawled = datetime.now()
 
         new_task = self._derive_attributes_from_task_description(new_task)
@@ -279,6 +281,31 @@ class CrawlConfluence:
                 single_user[k] = v
 
         return current_confluence_users
+
+    def recrawl_task(self, page_id, task_id):
+        """
+        All tries to work with https://developer.atlassian.com/cloud/confluence/rest/api-group-inline-tasks/#api-wiki-rest-api-inlinetasks-search-get
+        and /rest/inlinetasks/1/task/ did not work out.
+
+        Reading the page, searching for the task-id and checking for status
+        :param page_id:
+        :param task_id:
+        :return: is_done. True = done. False = still open
+        """
+        # funktioniert nicht: url = f"{self.confluence_url}/rest/inlinetasks/1/task/{page_id}/{task_id}"
+        page = self.instance.get_page_by_id(page_id=page_id, expand="body.storage")
+        logger.debug(f"Recrawling task {task_id} from page {page_id}")
+        soup = BeautifulSoup(page["body"]["storage"]["value"], features="html.parser")
+        x = soup.find_all("ac:task")
+        for y in x:
+            l_id = int(y.find("ac:task-id").text)
+            if l_id == task_id and y.find("ac:task-status").text == "incomplete":
+                return False
+            elif l_id == task_id:
+                return True
+        logger.warning(f"Couldn't find Task-ID {task_id} in {page_id}. Setting task to completed")
+        return True
+
 
     def crawl_tasks_for_user(self, conf_user_name, limit=10, max_entries=100, start=0):
         """

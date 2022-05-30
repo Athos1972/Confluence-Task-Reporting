@@ -286,14 +286,17 @@ class CrawlConfluence:
         """
         All tries to work with https://developer.atlassian.com/cloud/confluence/rest/api-group-inline-tasks/#api-wiki-rest-api-inlinetasks-search-get
         and /rest/inlinetasks/1/task/ did not work out.
+        # doesn't work: url = f"{self.confluence_url}/rest/inlinetasks/1/task/{page_id}/{task_id}"
 
         Reading the page, searching for the task-id and checking for status
+
         :param page_id:
         :param task_id:
         :return: is_done. True = done. False = still open
         """
-        # funktioniert nicht: url = f"{self.confluence_url}/rest/inlinetasks/1/task/{page_id}/{task_id}"
+
         page = self.instance.get_page_by_id(page_id=page_id, expand="body.storage")
+        sleep(self.sleep_between_tasks)
         logger.debug(f"Recrawling task {task_id} from page {page_id}")
         soup = BeautifulSoup(page["body"]["storage"]["value"], features="html.parser")
         x = soup.find_all("ac:task")

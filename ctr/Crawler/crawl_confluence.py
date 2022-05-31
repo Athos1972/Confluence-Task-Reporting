@@ -1,8 +1,8 @@
 from atlassian import Confluence
-from ctr.Util import global_config, logger
+from ctr.Util import global_config, logger, timeit
 from os import environ
 from datetime import datetime
-from ctr.Util import timeit
+from ctr.Util.Util import Util as UUtil
 import requests
 import sys
 from bs4 import BeautifulSoup
@@ -70,13 +70,12 @@ class UserWrapper(Wrapper):
 class TaskWrapper(Wrapper):
 
     def __init__(self, username, global_id, task_id, page_link, page_name, task_description, db_connection: SqlConnector = None,
-                 is_done: bool = False, second_date=None, due_date=None):
+                 is_done: bool = False, due_date=None):
         super().__init__(db_connection=db_connection)
         self.username = username
         self.global_id = global_id
         self.task_id = task_id
         self.due_date = due_date
-        self.second_date = second_date
         self.is_done = is_done
         self.page_link = page_link
         self.page_name = page_name
@@ -97,14 +96,15 @@ class TaskWrapper(Wrapper):
 
         # These attributes may have changed since last crawl:
         new_task.due_date = self._convert_confluence_due_date_to_datetime(self.due_date)
-        if self.second_date:
-            new_task.second_date = self._convert_confluence_due_date_to_datetime(self.second_date)
         new_task.is_done = self.is_done
         new_task.task_description = self.task_description
         new_task.task_id = self.task_id
         new_task.last_crawled = datetime.now()
 
         new_task = self._derive_attributes_from_task_description(new_task)
+
+        if new_task.is_done:
+            logger.debug(f"Task {new_task} set to done.")
 
         if self.username:
             try:
@@ -236,7 +236,16 @@ class TaskWrapper(Wrapper):
             try:
                 return datetime.strptime(confluence_date, "%d %b %Y")  # Month as abbrevation
             except ValueError:
+                pass
+            try:
                 return datetime.strptime(confluence_date, "%d %B %Y")  # Month fully written
+            except ValueError:
+                pass
+            try:
+                return datetime.strptime(confluence_date, "%Y-%m-%d")  # 2022-05-25
+            except ValueError:
+                logger.critical(f"Dateformat unknown: {confluence_date}. Is it a date??")
+                return None
         else:
             return confluence_date
 
@@ -271,15 +280,6 @@ class CrawlConfluence:
 
         current_confluence_users = self.__repeated_get(url, limit=limit, max_entries=max_entries, start=start)
 
-        for single_user in current_confluence_users:
-            # Attributes like E-Mail-Address are not expandable/received in the member-API-Call, so we must call
-            # again (this time for each user) to receive those details.
-            logger.debug(f"Getting further details for user {single_user['username']}")
-            conf_details = self.read_userdetails_for_user(single_user["username"])
-            sleep(self.sleep_between_tasks)
-            for k, v in conf_details.items():
-                single_user[k] = v
-
         return current_confluence_users
 
     def recrawl_task(self, page_id, task_id):
@@ -297,18 +297,17 @@ class CrawlConfluence:
 
         page = self.instance.get_page_by_id(page_id=page_id, expand="body.storage")
         sleep(self.sleep_between_tasks)
-        logger.debug(f"Recrawling task {task_id} from page {page_id}")
+        logger.debug(f"Recrawling task {task_id} from page {global_config.get_config('CONF_BASE_URL')}"
+                     f"/pages/viewpage.action?pageId={page_id}")
         soup = BeautifulSoup(page["body"]["storage"]["value"], features="html.parser")
         x = soup.find_all("ac:task")
         for y in x:
             l_id = int(y.find("ac:task-id").text)
-            if l_id == task_id and y.find("ac:task-status").text == "incomplete":
-                return False
-            elif l_id == task_id:
-                return True
+            if l_id == task_id:
+                # Return the task so that we can Map the result into the Task-ID
+                return y
         logger.warning(f"Couldn't find Task-ID {task_id} in {page_id}. Setting task to completed")
-        return True
-
+        return False
 
     def crawl_tasks_for_user(self, conf_user_name, limit=10, max_entries=100, start=0):
         """
@@ -370,11 +369,37 @@ class CrawlConfluence:
         results_found = []
         found_entries = True
         original_start_number = start
+        retry_count = 0
         lJson = ""
 
         while found_entries:
             new_url = f'{url}?{limit_tag}={limit}&{start_tag}={start}{url_append}'
-            response = self.session.get(new_url)
+
+            if retry_count >= 4:
+                logger.critical(f"Errors happened. Cant' catch url {new_url}. Aborting this crawl")
+                found_entries=False
+                continue
+
+            try:
+                response = self.session.get(new_url)
+                sleep(self.sleep_between_tasks)
+            except requests.HTTPError as ex:
+                logger.debug(f"HTTP error  for URL {new_url}. retry_count = {retry_count}. Retrying...")
+                retry_count += 1
+                sleep(1)
+                continue
+            except requests.ConnectionError as ex:
+                logger.debug(f"Connection error for URL {new_url}. retry_count = {retry_count}. Retrying...")
+                retry_count += 1
+                sleep(1)
+                continue
+            except requests.ReadTimeout:
+                logger.debug(f"read-Timeout for URL {new_url}. retry_count = {retry_count}. Retrying...")
+                sleep(1)
+                retry_count += 1
+                continue
+
+            retry_count = 0
 
             if response.status_code < 300:
                 lJson = response.json()
@@ -389,7 +414,6 @@ class CrawlConfluence:
                         if not v:
                             found_entries = False
                         break
-                sleep(self.sleep_between_tasks)
             else:
                 logger.critical(f"Error when reading url {new_url}. Error was: \n{response.text}")
                 break

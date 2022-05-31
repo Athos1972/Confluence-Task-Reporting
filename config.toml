@@ -5,7 +5,7 @@ filename_database = "sqlite:////users/bernhardbuhl/git/Confluence-Task-Reporting
 log_dir = "/users/bernhardbuhl/git/Confluence-Task-Reporting/logs/"
 
 # Duration in Seconds between each call to Confluence
-sleep_between_crawl_tasks = 1
+sleep_between_crawl_tasks = 1.5
 
 # Name of the logger:
 logger_name = "CONFTASK"

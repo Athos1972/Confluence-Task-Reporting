@@ -12,8 +12,8 @@ if __name__ == '__main__':
     # Selektion von Usern basierend auf last_recrawled
     session = db_connection.get_session()
     limit = 500
-    q = session.query(User).order_by(User.last_crawled).limit(limit)
-    # q = session.query(User).filter(User.conf_name == "NBUBEV")
+    # q = session.query(User).order_by(User.last_crawled).limit(limit)
+    q = session.query(User).filter(User.conf_name == "NBUBEV")
     for user in q:
         tasks = crawler.crawl_tasks_for_user(user.conf_name, limit=limit, max_entries=500, start=0)
         user.last_crawled = datetime.now()

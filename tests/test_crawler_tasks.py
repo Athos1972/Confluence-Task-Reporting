@@ -34,6 +34,7 @@ def test_task_wapper_new_task_short_date():
                           due_date="15 Feb 2022",
                           page_name="Franziska 4711",
                           task_description="123",
+                          task_id="1234",
                           page_link="123",
                           db_connection=db_connection)
     x = wrapper.update_task_in_database()
@@ -50,6 +51,7 @@ def test_task_wapper_new_task_long_date():
                           due_date="15 February 2022",
                           page_name="Franziska 4711",
                           task_description="123",
+                          task_id = 123,
                           page_link="123",
                           db_connection=db_connection)
     x = wrapper.update_task_in_database()
@@ -66,6 +68,7 @@ def test_task_wrapper_multiple(tasks_to_create=10):
         wrapper = TaskWrapper(username="", global_id=randint(1,1000000),
                               page_link="".join(choices(string.ascii_lowercase,k=15)),
                               page_name="franziska 4712",
+                              task_id=123,
                               task_description="<html></html>",
                               db_connection=db_connection)
         y = wrapper.update_task_in_database()

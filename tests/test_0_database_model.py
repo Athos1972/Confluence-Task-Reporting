@@ -3,7 +3,7 @@ from ctr.Util import global_config
 from ctr.Database.connection import SqlConnector
 from ctr.Database.model import CreateTableStructures
 from ctr.Database.model import User, Task, Page
-from datetime import datetime
+from datetime import datetime, timedelta
 from random import choices
 import string
 from ctr.Util import logger, timeit
@@ -69,6 +69,7 @@ def test_database_model_task_initial_creation():
     lNew.due_date = datetime.now()
     lNew.second_date = datetime.now()
     lNew.is_done = False
+    lNew.task_id = 123354
     lNew.page_link = "dummydummy"
     lNew.user = session.query(User).first()
     lNew.page = session.query(Page).first()
@@ -79,19 +80,31 @@ def test_database_model_task_initial_creation():
 
 
 def test_task_has_second_date_attribute():
-    x = session.query(Task).filter(Task.global_id==123, Task.second_date)
-    assert x[0].has_second_date == True
+    x = session.query(Task).filter(Task.global_id==123, Task.second_date).first()
+    assert x.has_second_date == True
 
 
 def test_task_has_second_date_attribute_false():
     task = Task(global_id=124)
     task.is_done = False
     task.page_link = "4711"
+    task.task_id = 123
     session.add(task)
     session.commit()
     x = session.query(Task).filter(Task.global_id == 124)
     assert x[0].has_second_date == False
 
+def test_task_age():
+    task = Task(global_id=12345)
+    task.is_done = False
+    task.task_id = 1234
+    task.due_date = datetime.now() - timedelta(days=1)
+    task.page_link = session.query(Task).first().page_link
+    session.add(task)
+    session.commit()
+    l_id = task.internal_id
+    x = session.query(Task).filter(Task.internal_id==l_id).first()
+    assert x.age >= 1
 
 def test_user_company_from_email():
     user = User("franzi", "fritzi", "fritzi@franzi.com", "semmal")
@@ -120,11 +133,12 @@ def test_database_model_create_more_entries_for_users(number_of_entries=100):
 
 if __name__ == '__main__':
     test_initial_creation_model()
+    test_database_model_page_initial_creation()
+    test_database_model_user_initial_creation()
+    test_database_model_task_initial_creation()
     test_create_initial_user()
     test_task_has_second_date_attribute()
     test_task_has_second_date_attribute_false()
     test_user_company_from_email()
-    test_database_model_page_initial_creation()
-    test_database_model_user_initial_creation()
-    test_database_model_task_initial_creation()
+    test_task_age()
     test_database_model_create_more_entries_for_users(100)

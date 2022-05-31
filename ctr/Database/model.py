@@ -7,6 +7,7 @@ from sqlalchemy import Boolean
 from sqlalchemy import func
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship
+from sqlalchemy.orm import column_property
 from sqlalchemy.ext.hybrid import hybrid_property
 from datetime import datetime
 from ctr.Util import logger
@@ -64,6 +65,7 @@ class Task(Base):
     first_seen = Column(DateTime(), default=func.now())
     last_crawled = Column(DateTime(), onupdate=func.now(), nullable=True)
     task_description = Column(String(), nullable=True)
+    # age = column_property(func.now() - due_date) --> Doesn't work. Gives "1"
 
     user_id = Column(Integer, ForeignKey("conf_users.id"), nullable=True)
     user = relationship("User", backref="tasks")
@@ -82,6 +84,15 @@ class Task(Base):
         if self.second_date:
             return True
         return False
+
+    @hybrid_property
+    def age(self):
+        x = (func.now() - self.due_date)
+        return x
+
+    @age.expression
+    def age(cls):
+        return func.julianday("now") - func.julianday(cls.due_date)
 
 
 class Page(Base):

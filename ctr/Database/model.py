@@ -29,7 +29,7 @@ class User(Base):
     conf_userkey = Column(String(100), nullable=False)
     display_name = Column(String(100), nullable=True)
     email = Column(String(255), nullable=True)  # Might be filled in later!
-    last_crawled = Column(DateTime(), onupdate=func.now(), nullable=True)
+    last_crawled = Column(DateTime(), onupdate=func.now(), default=func.now())
     tasks_last_crawled = Column(DateTime(), nullable=True)
 
     def __repr__(self):
@@ -87,7 +87,7 @@ class Task(Base):
 
     @hybrid_property
     def age(self):
-        x = (func.now() - self.due_date)
+        x = (datetime.now() - self.due_date)
         return x
 
     @age.expression

@@ -1,3 +1,8 @@
+import os, sys
+currentdir = os.path.dirname(os.path.realpath(__file__))
+parentdir = os.path.dirname(currentdir)
+sys.path.append(parentdir)
+
 from ctr.Util.Util import Util
 from ctr.Util import global_config
 from ctr.Database.connection import SqlConnector

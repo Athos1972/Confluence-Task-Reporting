@@ -5,3 +5,4 @@ python-dotenv~=0.20.0
 toml~=0.10.2
 dash
 pandas
+dash-bootstrap-components

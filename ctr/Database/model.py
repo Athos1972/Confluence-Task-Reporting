@@ -52,7 +52,6 @@ class User(Base):
             logger.exception(f"Deriving company_name from E-Mail failed. Error was {ex}")
             return None
 
-
 class Task(Base):
     __tablename__ = "tasks"
 

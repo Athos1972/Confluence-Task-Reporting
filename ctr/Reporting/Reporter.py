@@ -3,7 +3,7 @@ from ctr.Database.connection import SqlConnector
 from ctr.Database.model import Task, User, Page
 from sqlalchemy.sql import func
 from datetime import datetime
-
+import pandas as pd
 
 class TaskReporting:
     def __init__(self, db_connection: SqlConnector):
@@ -13,15 +13,25 @@ class TaskReporting:
     def task_count_by_space(self):
         q = self.session.query(func.count(Task.internal_id), Page.space).\
             join(Page).\
-            filter(Task.is_done==False).\
+            filter(Task.is_done == False).\
             group_by(Page.space)
         logger.debug(f"returned {q.count()} entries. Statement was: {str(q)}")
-        return q
+        print(list(q))
+
+        return pd.DataFrame(columns=['count', 'space'], data=list(q))
+
+    def task_overdue_count_by_space(self):
+        q = self.session.query(func.count(Task.internal_id), Page.space).\
+            join(Page).\
+            filter(Task.is_done == False, Task.due_date < datetime.now()).\
+            group_by(Page.space)
+        logger.debug(f"returned {q.count()} entries. Statement was: {str(q)}")
+        return pd.DataFrame(columns=['count', 'space'], data=list(q))
 
     def task_open_count_by_user(self):
         q = self.session.query(User.display_name, func.count(Task.internal_id)).\
             join(Task).\
-            filter(Task.is_done==False).\
+            filter(Task.is_done == False).\
             group_by(User.display_name)
         logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
         return q

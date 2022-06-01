@@ -70,7 +70,7 @@ class Task(Base):
     user_id = Column(Integer, ForeignKey("conf_users.id"), nullable=True)
     user = relationship("User", backref="tasks")
 
-    page_link = Column(Integer, ForeignKey("page.internal_id"), nullable=False)
+    page_link = Column(Integer, ForeignKey("pages.internal_id"), nullable=False)
     page = relationship("Page", backref="tasks")
 
     def __init__(self, global_id=global_id):
@@ -96,7 +96,7 @@ class Task(Base):
 
 
 class Page(Base):
-    __tablename__ = "page"
+    __tablename__ = "pages"
 
     internal_id = Column(Integer, primary_key=True, autoincrement=True)
     page_link = Column(String(100), nullable=False)

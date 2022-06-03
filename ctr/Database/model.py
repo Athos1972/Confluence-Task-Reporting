@@ -18,9 +18,9 @@ Base = declarative_base()
 def extract_company_from_email(context):
     email = context.get_current_parameters()['email']
     if not email:
-        return None
+        return ""
     if "@" not in email:
-        return None
+        return ""
     return email.split("@")[1].split(".")[0]
 
 

@@ -17,10 +17,12 @@ def test_tasks_per_space():
     for z in y:
         print(z)
 
+
 def test_task_count_per_user():
     y = x.task_open_count_by_user()
     for z in y:
         print(z)
+
 
 def test_task_overdue_per_user():
     y = x.task_overdue_count_by_user()
@@ -28,14 +30,29 @@ def test_task_overdue_per_user():
     for z in y:
         print(z)
 
+
 def test_task_age_per_space():
     y = x.tasks_by_age_and_space()
     print("\nTasks per age and Space")
     for z in y:
         print(z)
 
+
+def test_tasks_companies():
+    y = x.companies_from_users()
+    print("\nCompanies in E-Mail-Addresses")
+    print(y.head())
+
+def test_tasks_by_company():
+    y = x.task_count_by_company()
+    print("\nTask count by company")
+    print(y.head())
+
+
 if __name__ == '__main__':
     test_tasks_per_space()
     test_task_count_per_user()
     test_task_overdue_per_user()
     test_task_age_per_space()
+    test_tasks_by_company()
+    test_tasks_companies()

@@ -63,6 +63,10 @@ class TaskReporting:
         logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
         return pd.DataFrame(columns=['count', 'company'], data=list(q))
 
+    def companies_from_users(self):
+        q = self.session.query(User.company).distinct()
+        return pd.DataFrame(columns=["company"], data=list(q))
+
     def tasks_by_age_and_space(self):
         stmt = """select age, count(age) as count_age, page_space from (SELECT julianday(CURRENT_TIMESTAMP) - julianday(tasks.due_date) AS age, 
 page.space AS page_space FROM tasks JOIN page ON page.internal_id = tasks.page_link 
@@ -71,4 +75,3 @@ WHERE tasks.is_done = 0 AND tasks.due_date) group by age
         q = self.session.execute(stmt)
         # logger.debug(f"returned {len(q)} entries. Statement was {str(q)}")
         return q
-

@@ -203,6 +203,18 @@ def select_options(selected_company, selected_space, checked_overdue):
                     ),
                     className="w-100"
                 )
+            else:
+                space_overdue_tasks_card = dbc.Card(
+                    dbc.CardBody(
+                        [
+                            html.H4("Space's Overdue Tasks", className="card-title"),
+                            html.P(html.Center(html.Strong("-")),
+                                   className="card-text",
+                                   ),
+                        ]
+                    ),
+                    className="w-100",
+                )
         elif input_id == "selectCompany":
             active_company = selected_company
             if len(str(selected_company)) > 0:
@@ -220,6 +232,18 @@ def select_options(selected_company, selected_space, checked_overdue):
                         ]
                     ),
                     className="w-100",
+                )
+            else:
+                company_overdue_tasks_card = dbc.Card(
+                    dbc.CardBody(
+                        [
+                            html.H4("Company's Overdue Tasks", className="card-title"),
+                            html.P(html.Center(html.Strong("-")),
+                                   className="card-text",
+                                   ),
+                        ]
+                    ),
+                    className="w-100"
                 )
         elif input_id == "checkOverdue":
             overdue = not overdue

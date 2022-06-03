@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import dash
 import dash_bootstrap_components as dbc
 from dash import Input, Output, html, dcc, callback_context, dash_table
@@ -11,8 +13,8 @@ db_connection = SqlConnector()
 reporter = Reporter.TaskReporting(db_connection)
 explorer = Explorer.TaskExploring(db_connection)
 
-companies = explorer.get_companies()
-spaces = explorer.get_spaces()
+companies = [None] + explorer.get_companies()
+spaces = [None] + explorer.get_spaces()
 explorer.init_user_companies()
 
 open_tasks_per_space = reporter.task_count_by_space()
@@ -40,19 +42,17 @@ for i in range(len(page_names)):
     page_link = page_links[i]
     page_hyperlinks.append(html.A([page_name], href=page_link))
     task_selectors.append(dbc.Checkbox(
-                    id=f"select&{internal_ids[i]}",
-                    value=False,))
+        id=f"select&{internal_ids[i]}",
+        value=False, ))
 
 grid_data = grid_data.drop(['page_link', 'task_internal_id', 'page_name'], axis=1)
 
 grid_data["page_name"] = page_hyperlinks
 grid_data["check"] = task_selectors
 
-# grid_data = grid_data.assign(page_name=lambda row: html.A([row.page_name], rel=row.page_link))
-
 grid_data = grid_data.reset_index(drop=True)
 
-# grid_data.assign(trigger=dcc.Input(type="checkbox", value=0, id="box-trigger", placeholder=grid_data["task_internal_id"]))
+filtered_grid = grid_data
 
 space_overdue_tasks_card = dbc.Card(
     dbc.CardBody(
@@ -81,7 +81,7 @@ company_overdue_tasks_card = dbc.Card(
 app = dash.Dash(
     external_stylesheets=[dbc.themes.BOOTSTRAP],
 )
-app.config.suppress_callback_exceptions=True
+app.config.suppress_callback_exceptions = True
 
 active_space = None
 active_company = None
@@ -89,16 +89,16 @@ overdue = False
 
 selectSpace = dbc.InputGroup(
     [dbc.InputGroupText("Space"),
-     dbc.Select(id="selectSpace", options=[{"label": space, "value": space} for space in spaces])],
+     dbc.Select(id="selectSpace", value=None, options=[{"label": space, "value": space} for space in spaces])],
     className="mb-3")
 
 selectCompany = dbc.InputGroup(
     [dbc.InputGroupText("Company"),
-     dbc.Select(id="selectCompany", options=[{"label": company, "value": company} for company in companies])],
+     dbc.Select(id="selectCompany", value=None, options=[{"label": company, "value": company} for company in companies])],
     className="mb-3")
 
 checkOverdue = dbc.InputGroup(
-    [dbc.Checkbox(id="checkOverdue", label="Only Overdue")],
+    [dbc.Checkbox(id="checkOverdue", value=False, label="Only Overdue")],
     className="mt-2")
 
 OpenTasksPerSpaceFig = px.bar(data_frame=open_tasks_per_space_data, x='space', y='count', color='space',
@@ -129,30 +129,31 @@ app.layout = dbc.Container(
                 dbc.Col([company_overdue_tasks_card], width=5),
                 dbc.Col([
                     dbc.Button(id="btn_send_reminder", children=["Send Reminder"], className="w-100 h-100", n_clicks=0)
-                ], width=2)
+                ], width=2),
+                dbc.Col([
+                    dbc.Table.from_dataframe(filtered_grid[:PAGE_SIZE], striped=True, bordered=True, hover=True),
+                ], className="mt-3", width=12),
             ], id="dashboard"
         ),
-        # TABLE
-        dbc.Row([
-            dbc.Table.from_dataframe(grid_data[:PAGE_SIZE], striped=True, bordered=True, hover=True),
-        ], id="grid-table"),
         dbc.Pagination(id="pagination", min_value=1, max_value=MAX_PAGES, className="justify-content-center",
-                       fully_expanded=False, first_last=True, previous_next=True)],
+                       fully_expanded=False, first_last=True, previous_next=True)
+    ]
 
 )
+
 
 @app.callback(
     Output("callback_output2", "children"),
     [Input(f"select&{internal_ids[i]}", "value")
      for i in range(ACTIVE_PAGE * PAGE_SIZE, min(ACTIVE_PAGE * (PAGE_SIZE + 1), len(internal_ids)))],
-    suppress_callback_exceptions=True
 )
 def check_task(*args):
     global checked_tasks, PAGE_SIZE, MAX_PAGES, ACTIVE_PAGE
     print("in")
     ctx = dash.callback_context
     input_id = ctx.triggered[0]["prop_id"].split(".")[0]
-    print(input_id)
+    print("Task.internal_id=" + input_id[7:])
+
 
 @app.callback(
     Output("grid-table", "children"),
@@ -160,13 +161,15 @@ def check_task(*args):
 )
 def change_page(page):
     global PAGE_SIZE, MAX_PAGES, ACTIVE_PAGE
+
     if page:
         ACTIVE_PAGE = page
         return [
-            dbc.Table.from_dataframe(grid_data[(page - 1) * PAGE_SIZE:page * PAGE_SIZE], striped=True, bordered=True,
-                                     hover=True),]
+            dbc.Table.from_dataframe(filtered_grid[(page - 1) * PAGE_SIZE:page * PAGE_SIZE], striped=True,
+                                     bordered=True,
+                                     hover=True)]
     return [
-            dbc.Table.from_dataframe(grid_data[:PAGE_SIZE], striped=True, bordered=True, hover=True),]
+        dbc.Table.from_dataframe(filtered_grid[:PAGE_SIZE], striped=True, bordered=True, hover=True), ]
 
 
 @app.callback(
@@ -178,7 +181,7 @@ def change_page(page):
 def select_options(selected_company, selected_space, checked_overdue):
     global active_space, active_company, overdue, open_tasks_per_space_data, open_tasks_per_space, \
         open_overdue_tasks_per_space, OpenTasksPerSpaceFig, space_overdue_tasks_card, company_overdue_tasks_card, \
-        open_tasks_per_company_data, OpenTasksPerCompanyFig
+        open_tasks_per_company_data, OpenTasksPerCompanyFig, ACTIVE_PAGE, PAGE_SIZE, filtered_grid, MAX_PAGES
 
     ctx = dash.callback_context
     if ctx.triggered:
@@ -186,35 +189,38 @@ def select_options(selected_company, selected_space, checked_overdue):
 
         if input_id == "selectSpace":
             active_space = selected_space
-            overdue_count = \
-                open_overdue_tasks_per_space[(open_overdue_tasks_per_space.space == selected_space)].values[0][0]
-            space_overdue_tasks_card = dbc.Card(
-                dbc.CardBody(
-                    [
-                        html.H4("Space's Overdue Tasks", className="card-title"),
-                        html.P(html.Center(html.Strong(overdue_count)),
-                               className="card-text",
-                               ),
-                    ]
-                ),
-                className="w-100"
-            )
+            if len(str(selected_space)) > 0:
+                overdue_count = \
+                    open_overdue_tasks_per_space[(open_overdue_tasks_per_space.space == selected_space)].values[0][0]
+                space_overdue_tasks_card = dbc.Card(
+                    dbc.CardBody(
+                        [
+                            html.H4("Space's Overdue Tasks", className="card-title"),
+                            html.P(html.Center(html.Strong(overdue_count)),
+                                   className="card-text",
+                                   ),
+                        ]
+                    ),
+                    className="w-100"
+                )
         elif input_id == "selectCompany":
             active_company = selected_company
-            overdue_count = \
-                open_overdue_tasks_per_company[(open_overdue_tasks_per_company.company == selected_company)].values[0][
-                    0]
-            company_overdue_tasks_card = dbc.Card(
-                dbc.CardBody(
-                    [
-                        html.H4("Company's Overdue Tasks", className="card-title"),
-                        html.P(html.Center(html.Strong(overdue_count)),
-                               className="card-text",
-                               ),
-                    ]
-                ),
-                className="w-100",
-            )
+            if len(str(selected_company)) > 0:
+                overdue_count = \
+                    open_overdue_tasks_per_company[(open_overdue_tasks_per_company.company == selected_company)].values[
+                        0][
+                        0]
+                company_overdue_tasks_card = dbc.Card(
+                    dbc.CardBody(
+                        [
+                            html.H4("Company's Overdue Tasks", className="card-title"),
+                            html.P(html.Center(html.Strong(overdue_count)),
+                                   className="card-text",
+                                   ),
+                        ]
+                    ),
+                    className="w-100",
+                )
         elif input_id == "checkOverdue":
             overdue = not overdue
             if not overdue:
@@ -230,6 +236,18 @@ def select_options(selected_company, selected_space, checked_overdue):
                                             color='company',
                                             hover_data=['company'])
 
+        filtered_grid = grid_data
+        if selected_space:
+            filtered_grid = filtered_grid[filtered_grid["page_space"] == selected_space]
+            MAX_PAGES = len(filtered_grid) // PAGE_SIZE
+
+        if selected_company:
+            filtered_grid = filtered_grid[filtered_grid["user_company"] == selected_company]
+            MAX_PAGES = len(filtered_grid) // PAGE_SIZE
+
+        if overdue:
+            filtered_grid = filtered_grid[filtered_grid["task_due_date"] < datetime.now()]
+
     return [
         dbc.Col([html.Strong("Open tasks per space graph")], className="text-center mt-3 pt-3", width=6),
         dbc.Col([html.Strong("Open tasks per company graph")], className="text-center mt-3 pt-3", width=6),
@@ -239,7 +257,11 @@ def select_options(selected_company, selected_space, checked_overdue):
         dbc.Col([company_overdue_tasks_card], width=5),
         dbc.Col([
             dbc.Button(id="btn_send_reminder", children=["Send Reminder"], className="w-100 h-100", n_clicks=0)
-        ], width=2)
+        ], width=2),
+        dbc.Col([
+            dbc.Table.from_dataframe(filtered_grid[(ACTIVE_PAGE - 1) * PAGE_SIZE:ACTIVE_PAGE * PAGE_SIZE], striped=True,
+                                     bordered=True, hover=True),
+        ], className="mt-3", width=12),
     ]
 
 
@@ -259,5 +281,4 @@ def send_reminder(reminder_btn):
 
 
 if __name__ == "__main__":
-
     app.run_server(debug=True)

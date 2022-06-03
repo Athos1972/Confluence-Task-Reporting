@@ -15,6 +15,15 @@ from ctr.Util import logger
 Base = declarative_base()
 
 
+def extract_company_from_email(context):
+    email = context.get_current_parameters()['email']
+    if not email:
+        return None
+    if "@" not in email:
+        return None
+    return email.split("@")[1].split(".")[0]
+
+
 class ModelDoku:
     """
     This file holds the sqlalchemy-Model. Basically the tables and the fields and a bit of Alchemy.
@@ -31,7 +40,9 @@ class User(Base):
     email = Column(String(255), nullable=True)  # Might be filled in later!
     last_crawled = Column(DateTime(), onupdate=func.now(), nullable=True)
     tasks_last_crawled = Column(DateTime(), nullable=True)
-    company = Column(String(100), nullable=True)
+    company = Column(String(100), nullable=True,
+                     default=extract_company_from_email,
+                     onupdate=extract_company_from_email)
 
     def __repr__(self):
         return f"User(id={self.id!r}, Name={self.conf_name!r} E-Mail={self.email!r}"
@@ -44,15 +55,6 @@ class User(Base):
         self.last_crawled = last_crawled
         self.company = None
 
-    @hybrid_property
-    def company_name(self):
-        if not self.email:
-            return None
-        try:
-            return self.email.split("@")[1].split(".")[0]
-        except Exception as ex:
-            logger.exception(f"Deriving company_name from E-Mail failed. Error was {ex}")
-            return None
 
 class Task(Base):
     __tablename__ = "tasks"

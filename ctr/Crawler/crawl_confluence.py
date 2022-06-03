@@ -164,7 +164,8 @@ class TaskWrapper(Wrapper):
         :param subquery_session: Just a session
         :return:
         """
-        self.page_link = self.page_link[:self.page_link.find("focusedTaskId=") - 1]
+        if "focusedTaskId" in self.page_link:
+            self.page_link = self.page_link[:self.page_link.find("focusedTaskId=") - 1]
         new_task.page_link = subquery_session.query(Page).filter(
             Page.page_link == self.page_link).first()
         if not new_task.page_link:

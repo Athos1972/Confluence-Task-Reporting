@@ -7,8 +7,8 @@ from ctr.Util.Util import Util
 
 Util.load_env_file()
 test_instance = CrawlConfluence()
-# db_connection = SqlConnector(file=f"sqlite:///{Path.cwd().joinpath('testdatabase.db')}")
-db_connection = SqlConnector()
+db_connection = SqlConnector(file=f"sqlite:///{Path.cwd().joinpath('testdatabase.db')}")
+# db_connection = SqlConnector()
 session = db_connection.get_session()
 x = TaskReporting(db_connection=db_connection)
 

@@ -99,6 +99,7 @@ def test_task_has_second_date_attribute_false():
     x = session.query(Task).filter(Task.global_id == 124)
     assert x[0].has_second_date == False
 
+
 def test_task_age():
     task = Task(global_id=12345)
     task.is_done = False
@@ -109,7 +110,9 @@ def test_task_age():
     session.commit()
     l_id = task.internal_id
     x = session.query(Task).filter(Task.internal_id==l_id).first()
-    assert x.age >= 1
+    print(f"Age: {x.age}")
+    assert x.age >= timedelta(days=1)
+
 
 def test_user_company_from_email():
     user = User("franzi", "fritzi", "fritzi@franzi.com", "semmal")

@@ -38,7 +38,7 @@ class User(Base):
     conf_userkey = Column(String(100), nullable=False)
     display_name = Column(String(100), nullable=True)
     email = Column(String(255), nullable=True)  # Might be filled in later!
-    last_crawled = Column(DateTime(), onupdate=func.now(), nullable=True)
+    last_crawled = Column(DateTime(), onupdate=func.now(), default=func.now())
     tasks_last_crawled = Column(DateTime(), nullable=True)
     company = Column(String(100), nullable=True,
                      default=extract_company_from_email,
@@ -73,7 +73,7 @@ class Task(Base):
     user_id = Column(Integer, ForeignKey("conf_users.id"), nullable=True)
     user = relationship("User", backref="tasks")
 
-    page_link = Column(Integer, ForeignKey("page.internal_id"), nullable=False)
+    page_link = Column(Integer, ForeignKey("pages.internal_id"), nullable=False)
     page = relationship("Page", backref="tasks")
 
     def __init__(self, global_id=global_id):
@@ -90,7 +90,7 @@ class Task(Base):
 
     @hybrid_property
     def age(self):
-        x = (func.now() - self.due_date)
+        x = (datetime.now() - self.due_date)
         return x
 
     @age.expression
@@ -99,7 +99,7 @@ class Task(Base):
 
 
 class Page(Base):
-    __tablename__ = "page"
+    __tablename__ = "pages"
 
     internal_id = Column(Integer, primary_key=True, autoincrement=True)
     page_link = Column(String(100), nullable=False)

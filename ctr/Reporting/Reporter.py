@@ -68,8 +68,9 @@ class TaskReporting:
         return pd.DataFrame(columns=["company"], data=list(q))
 
     def tasks_by_age_and_space(self):
-        stmt = """select age, count(age) as count_age, page_space from (SELECT julianday(CURRENT_TIMESTAMP) - julianday(tasks.due_date) AS age, 
-page.space AS page_space FROM tasks JOIN page ON page.internal_id = tasks.page_link 
+        stmt = """select age, count(age) as count_age, page_space from 
+(SELECT round(julianday(CURRENT_TIMESTAMP) - julianday(tasks.due_date),0) AS age, 
+pages.space AS page_space FROM tasks JOIN pages ON pages.internal_id = tasks.page_link 
 WHERE tasks.is_done = 0 AND tasks.due_date) group by age
         """
         q = self.session.execute(stmt)

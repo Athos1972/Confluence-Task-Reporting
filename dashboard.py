@@ -132,7 +132,7 @@ app.layout = dbc.Container(
                 ], width=2),
                 dbc.Col([
                     dbc.Table.from_dataframe(filtered_grid[:PAGE_SIZE], striped=True, bordered=True, hover=True),
-                ], className="mt-3", width=12),
+                ], className="mt-3", width=12, id="grid-table"),
             ], id="dashboard"
         ),
         dbc.Pagination(id="pagination", min_value=1, max_value=MAX_PAGES, className="justify-content-center",
@@ -284,7 +284,7 @@ def select_options(selected_company, selected_space, checked_overdue):
         ], width=2),
         dbc.Col([
             dbc.Table.from_dataframe(filtered_grid[(ACTIVE_PAGE - 1) * PAGE_SIZE:ACTIVE_PAGE * PAGE_SIZE], striped=True,
-                                     bordered=True, hover=True),
+                                     bordered=True, hover=True, id="grid-table"),
         ], className="mt-3", width=12),
     ]
 

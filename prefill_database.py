@@ -15,7 +15,7 @@ import datetime
 # Empties testdatabase, creates 1500 random users, 1500 Confluence-Pages and 3000 Tasks for those users on those
 # pages
 
-db_connection = SqlConnector(file=f"sqlite:///{Path.cwd().joinpath('prod.db')}")
+db_connection = SqlConnector(file=f"sqlite:///{Path.cwd().joinpath('testdatabase.db')}")
 session = db_connection.get_session()
 
 faker = Faker(locale="en_US")
@@ -26,10 +26,17 @@ session.execute("delete from page")
 session.execute("delete from conf_users")
 
 print("Creating Users")
+
+company_list = [
+    "siemens",
+    "ibm",
+    "sap",
+]
+
 for i in range(1501):
     user = User(conf_name=f"NBU{i}",
                 conf_userkey="".join(choices(string.ascii_letters, k=22)),
-                email = faker.email(),
+                email = faker.email().replace("example", company_list[randint(0,len(company_list)-1)]),
                 display_name=faker.name())
     session.add(user)
     session.commit()

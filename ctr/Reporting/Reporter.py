@@ -63,6 +63,10 @@ class TaskReporting:
         logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
         return pd.DataFrame(columns=['count', 'company'], data=list(q))
 
+    def companies_from_users(self):
+        q = self.session.query(User.company).distinct()
+        return pd.DataFrame(columns=["company"], data=list(q))
+
     def tasks_by_age_and_space(self):
         stmt = """select age, count(age) as count_age, page_space from 
 (SELECT round(julianday(CURRENT_TIMESTAMP) - julianday(tasks.due_date),0) AS age, 

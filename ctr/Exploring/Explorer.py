@@ -53,10 +53,11 @@ class TaskExploring:
 
     def get_task_view(self):
         q = self.session.query(Task.internal_id, Task.task_id, Task.task_description, Task.due_date, Task.second_date,
-                               User.display_name, Page.space, Page.page_name, Page.page_link). \
-            join(User, Page).where(Page.internal_id == Task.page_link, User.id == Task.user_id)
+                               User.display_name, Page.space, Page.page_name, Page.page_link, User.company). \
+            join(User, Page).where(Page.internal_id == Task.page_link, User.id == Task.user_id, Task.is_done == True)
 
         logger.debug(f"returned {len(list(q))} entries. Statement was: {str(q)}")
 
         return pd.DataFrame(columns=["task_internal_id", "task_id", "task_desc", "task_due_date", "task_second_date",
-                                     "user_display_name", "page_space", "page_name", "page_link"], data=list(q))
+                                     "user_display_name", "page_space", "page_name", "page_link", "user_company"],
+                            data=list(q))

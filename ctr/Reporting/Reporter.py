@@ -37,6 +37,14 @@ class TaskReporting:
         logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
         return q
 
+    def task_overdue_count_by_user(self):
+        q = self.session.query(User.display_name, func.count(Task.internal_id)).\
+            join(Task).\
+            filter(Task.is_done==False, Task.due_date < datetime.now()).\
+            group_by(User.display_name)
+        logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
+        return q
+
     def task_count_by_company(self):
         q = self.session.query(func.count(Task.internal_id), User.company).\
             join(Task).\

@@ -76,4 +76,3 @@ WHERE tasks.is_done = 0 AND tasks.due_date) group by age
         q = self.session.execute(stmt)
         # logger.debug(f"returned {len(q)} entries. Statement was {str(q)}")
         return q
-

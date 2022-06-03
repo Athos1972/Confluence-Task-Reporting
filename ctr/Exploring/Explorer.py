@@ -3,7 +3,7 @@ from sqlalchemy import select, distinct
 from ctr.Util import logger
 from ctr.Database.connection import SqlConnector
 from ctr.Database.model import Task, User, Page
-from sqlalchemy.sql import func, text
+from sqlalchemy.sql import func, text, update
 from datetime import datetime
 import re
 
@@ -33,11 +33,21 @@ class TaskExploring:
         return q
 
     def get_companies(self):
-        stmt = distinct(User.email)
+        stmt = distinct(User.company)
 
-        q = list(self.session.query(stmt))
+        results = list(self.session.query(stmt))
 
-        q = list(set([get_company_name(row[0]) for row in q]))
+        q = [row[0] for row in results]
 
         logger.debug(f"returned {len(q)} entries. Statement was: {str(q)}")
         return q
+
+    def init_user_companies(self):
+        q = self.session.query(User.email, User.company)
+        logger.debug(f"returned {len(list(q))} entries. Statement was: {str(q)}")
+
+        for user in list(q):
+            if user[1] is None:
+                stmt = update(User).where(User.email == user[0]).values(company=get_company_name(user[0]))
+                self.session.execute(stmt)
+                self.session.commit()

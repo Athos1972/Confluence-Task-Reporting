@@ -31,6 +31,7 @@ class User(Base):
     email = Column(String(255), nullable=True)  # Might be filled in later!
     last_crawled = Column(DateTime(), onupdate=func.now(), default=func.now())
     tasks_last_crawled = Column(DateTime(), nullable=True)
+    company = Column(String(100), nullable=True)
 
     def __repr__(self):
         return f"User(id={self.id!r}, Name={self.conf_name!r} E-Mail={self.email!r}"
@@ -41,6 +42,7 @@ class User(Base):
         self.email = email
         self.display_name = display_name
         self.last_crawled = last_crawled
+        self.company = None
 
     @hybrid_property
     def company_name(self):

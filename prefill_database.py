@@ -52,17 +52,17 @@ for i in range(1501):
 
 print("Creating tasks")
 for i in range(3000):
-    q = session.query(Page).filter(Page.internal_id == randint(0, 1500)).first()
-
+    page_link = randint(0, 1500)
     p = session.query(User).filter(User.id == randint(0, 1500)).first()
 
     task = Task(
         global_id=i,
     )
+
     task.task_id = randint(1, 50)
     task.task_description = faker.sentence(nb_words=randint(2, 12))
-    task.page_link = q.page_link
-    task.page_name = q.page_name
+    task.page_link = page_link
+    task.page_name = "page_name"
     task.is_done = True if randint(1, 100) % 2 == 0 else False
     if p:
         task.user_id = p.id

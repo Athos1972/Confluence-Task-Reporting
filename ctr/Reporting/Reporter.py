@@ -10,22 +10,23 @@ class TaskReporting:
         self.db_connection = db_connection
         self.session = self.db_connection.get_session()
 
-    def task_count_by_space(self):
-        q = self.session.query(func.count(Task.internal_id), Page.space).\
+    def task_count_by_space(self, company=None, space=None):
+        q = self.session.query(func.count(Task.due_date), Page.space).\
             join(Page).\
             filter(Task.is_done == False).\
             group_by(Page.space)
-        logger.debug(f"returned {q.count()} entries. Statement was: {str(q)}")
-        print(list(q))
 
+        logger.debug(f"returned {q.count()} entries. Statement was: {str(q)}")
         return pd.DataFrame(columns=['count', 'space'], data=list(q))
 
-    def task_overdue_count_by_space(self):
-        q = self.session.query(func.count(Task.internal_id), Page.space).\
+    def task_overdue_count_by_space(self, company=None, space=None):
+        q = self.session.query(func.count(Task.due_date), Page.space).\
             join(Page).\
             filter(Task.is_done == False, Task.due_date < datetime.now()).\
             group_by(Page.space)
+
         logger.debug(f"returned {q.count()} entries. Statement was: {str(q)}")
+
         return pd.DataFrame(columns=['count', 'space'], data=list(q))
 
     def task_open_count_by_user(self):
@@ -36,13 +37,23 @@ class TaskReporting:
         logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
         return q
 
-    def task_overdue_count_by_user(self):
-        q = self.session.query(User.display_name, func.count(Task.internal_id)).\
+    def task_count_by_company(self):
+        q = self.session.query(func.count(Task.internal_id), User.company).\
+            join(Task).\
+            filter(Task.is_done == False).\
+            group_by(User.company)
+
+        logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
+        return pd.DataFrame(columns=['count', 'company'], data=list(q))
+
+    def task_overdue_count_by_company(self):
+        q = self.session.query(func.count(Task.internal_id), User.company).\
             join(Task).\
             filter(Task.is_done==False, Task.due_date < datetime.now()).\
-            group_by(User.display_name)
+            group_by(User.company)
+
         logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
-        return q
+        return pd.DataFrame(columns=['count', 'company'], data=list(q))
 
     def tasks_by_age_and_space(self):
         stmt = """select age, count(age) as count_age, page_space from 

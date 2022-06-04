@@ -20,7 +20,6 @@ session = db_connection.get_session()
 
 
 def test_initial_creation_model():
-
     createTables = CreateTableStructures(engine=db_connection.get_engine())
     createTables.create_table_structures()
 

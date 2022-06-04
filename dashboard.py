@@ -2,6 +2,7 @@ from datetime import date
 
 import dash
 import dash_bootstrap_components as dbc
+import numpy as np
 from dash import Input, Output, html, dcc, callback_context, dash_table
 from ctr.Database.connection import SqlConnector
 import ctr.Reporting.Reporter as Reporter
@@ -23,6 +24,9 @@ open_tasks_per_company = reporter.task_count_by_company()
 open_overdue_tasks_per_company = reporter.task_overdue_count_by_company()
 open_tasks_per_space_data = open_tasks_per_space
 open_tasks_per_company_data = open_tasks_per_company
+overdue_tasks_age = reporter.overdue_tasks_by_age_and_space()
+tasks_age = reporter.tasks_by_age_and_space()
+tasks_by_age_data = tasks_age
 
 # DASH TABLE
 PAGE_SIZE = 25
@@ -80,6 +84,19 @@ company_overdue_tasks_card = dbc.Card(
     className="w-100"
 )
 
+task_average_time_card = dbc.Card(
+    dbc.CardBody(
+        [
+            html.H4("Average Task Age", className="card-title"),
+            html.P(html.Center(html.Strong(f"{int(tasks_by_age_data['age'].mean())} days")),
+                   className="card-text",
+                   ),
+        ]
+    ),
+    className="w-100"
+)
+
+
 app = dash.Dash(
     external_stylesheets=[dbc.themes.BOOTSTRAP],
 )
@@ -127,11 +144,12 @@ app.layout = dbc.Container(
                 dbc.Col([html.Strong("Open tasks per company graph")], className="text-center mt-3 pt-3", width=6),
                 dbc.Col([dcc.Graph(figure=OpenTasksPerSpaceFig)], width=6),
                 dbc.Col([dcc.Graph(figure=OpenTasksPerCompanyFig)], width=6),
-                dbc.Col([space_overdue_tasks_card], width=5),
-                dbc.Col([company_overdue_tasks_card], width=5),
+                dbc.Col([space_overdue_tasks_card], width=3),
+                dbc.Col([company_overdue_tasks_card], width=3),
+                dbc.Col([task_average_time_card], width=3),
                 dbc.Col([
                     dbc.Button(id="btn_send_reminder", children=["Send Reminder"], className="w-100 h-100", n_clicks=0)
-                ], width=2),
+                ], width=3),
                 dbc.Col([
                     dbc.Table.from_dataframe(filtered_grid[:PAGE_SIZE], striped=True, bordered=True, hover=True),
                 ], className="mt-3", width=12, id="grid-table"),
@@ -185,7 +203,8 @@ def change_page(page):
 def select_options(selected_company, selected_space, checked_overdue):
     global active_space, active_company, overdue, open_tasks_per_space_data, open_tasks_per_space, \
         open_overdue_tasks_per_space, OpenTasksPerSpaceFig, space_overdue_tasks_card, company_overdue_tasks_card, \
-        open_tasks_per_company_data, OpenTasksPerCompanyFig, ACTIVE_PAGE, PAGE_SIZE, filtered_grid, MAX_PAGES
+        open_tasks_per_company_data, OpenTasksPerCompanyFig, ACTIVE_PAGE, PAGE_SIZE, filtered_grid, MAX_PAGES, \
+        tasks_by_age_data, task_average_time_card
 
     ctx = dash.callback_context
     if ctx.triggered:
@@ -193,6 +212,10 @@ def select_options(selected_company, selected_space, checked_overdue):
 
         if input_id == "selectSpace":
             active_space = selected_space
+            if overdue:
+                tasks_by_age_data = overdue_tasks_age
+            else:
+                tasks_by_age_data = tasks_age
             if len(str(selected_space)) > 0:
                 overdue_count = \
                     open_overdue_tasks_per_space[(open_overdue_tasks_per_space.space == selected_space)].values[0][0]
@@ -208,6 +231,8 @@ def select_options(selected_company, selected_space, checked_overdue):
                     color="light",
                     className="w-100"
                 )
+
+                tasks_by_age_data = tasks_by_age_data[tasks_by_age_data["page_space"] == selected_space]
             else:
                 space_overdue_tasks_card = dbc.Card(
                     dbc.CardBody(
@@ -258,9 +283,16 @@ def select_options(selected_company, selected_space, checked_overdue):
             if not overdue:
                 open_tasks_per_space_data = open_tasks_per_space
                 open_tasks_per_company_data = open_tasks_per_company
+                tasks_by_age_data = tasks_age
+                if len(str(active_space)) > 0:
+                    tasks_by_age_data = tasks_by_age_data[tasks_by_age_data["page_space"] == active_space]
             else:
                 open_tasks_per_space_data = open_overdue_tasks_per_space
                 open_tasks_per_company_data = open_overdue_tasks_per_company
+                tasks_by_age_data = overdue_tasks_age
+                print(tasks_by_age_data)
+                if len(str(active_space)) > 0:
+                    tasks_by_age_data = tasks_by_age_data[tasks_by_age_data["page_space"] == active_space]
 
             OpenTasksPerSpaceFig = px.bar(data_frame=open_tasks_per_space_data, x='space', y='count', color='space',
                                           hover_data=['space'])
@@ -280,16 +312,43 @@ def select_options(selected_company, selected_space, checked_overdue):
         if overdue:
             filtered_grid = filtered_grid[filtered_grid["Reminder"] < date.now()]
 
+        print(tasks_by_age_data.shape)
+        if len(tasks_by_age_data) == 0:
+            task_average_time_card = dbc.Card(
+                dbc.CardBody(
+                    [
+                        html.H4("Average Task Age", className="card-title"),
+                        html.P(html.Center(html.Strong(f"{0} days")),
+                               className="card-text",
+                               ),
+                    ]
+                ),
+                className="w-100"
+            )
+        else:
+            task_average_time_card = dbc.Card(
+                dbc.CardBody(
+                    [
+                        html.H4("Average Task Age", className="card-title"),
+                        html.P(html.Center(html.Strong(f"{int(tasks_by_age_data['age'].mean())} days")),
+                               className="card-text",
+                               ),
+                    ]
+                ),
+                className="w-100"
+            )
+
     return [
         dbc.Col([html.Strong("Open tasks per space graph")], className="text-center mt-3 pt-3", width=6),
         dbc.Col([html.Strong("Open tasks per company graph")], className="text-center mt-3 pt-3", width=6),
         dbc.Col([dcc.Graph(figure=OpenTasksPerSpaceFig)], width=6),
         dbc.Col([dcc.Graph(figure=OpenTasksPerCompanyFig)], width=6),
-        dbc.Col([space_overdue_tasks_card], width=5),
-        dbc.Col([company_overdue_tasks_card], width=5),
+        dbc.Col([space_overdue_tasks_card], width=3),
+        dbc.Col([company_overdue_tasks_card], width=3),
+        dbc.Col([task_average_time_card], width=3),
         dbc.Col([
             dbc.Button(id="btn_send_reminder", children=["Send Reminder"], className="w-100 h-100", n_clicks=0)
-        ], width=2),
+        ], width=3),
         dbc.Col([
             dbc.Table.from_dataframe(filtered_grid[(ACTIVE_PAGE - 1) * PAGE_SIZE:ACTIVE_PAGE * PAGE_SIZE], striped=True,
                                      bordered=True, hover=True, id="grid-table"),

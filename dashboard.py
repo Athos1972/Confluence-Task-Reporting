@@ -282,7 +282,6 @@ def select_options(selected_company, selected_space, checked_overdue):
                 open_tasks_per_space_data = open_overdue_tasks_per_space
                 open_tasks_per_company_data = open_overdue_tasks_per_company
                 tasks_by_age_data = overdue_tasks_age
-                print(tasks_by_age_data)
                 if len(str(active_space)) > 0:
                     tasks_by_age_data = tasks_by_age_data[tasks_by_age_data["page_space"] == active_space]
 
@@ -304,7 +303,6 @@ def select_options(selected_company, selected_space, checked_overdue):
         if overdue:
             filtered_grid = filtered_grid[filtered_grid["task_due_date"] < datetime.now()]
 
-        print(tasks_by_age_data.shape)
         if len(tasks_by_age_data) == 0:
             task_average_time_card = dbc.Card(
                 dbc.CardBody(

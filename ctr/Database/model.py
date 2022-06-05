@@ -21,7 +21,8 @@ def extract_company_from_email(context):
         return ""
     if "@" not in email:
         return ""
-    return email.split("@")[1].split(".")[0]
+
+    return email.split("@")[1].split(".")[0].title()
 
 
 class ModelDoku:
@@ -42,7 +43,8 @@ class User(Base):
     tasks_last_crawled = Column(DateTime(), nullable=True)
     company = Column(String(100), nullable=True,
                      default=extract_company_from_email,
-                     onupdate=extract_company_from_email)
+                     onupdate=extract_company_from_email,
+                     index=True)
 
     def __repr__(self):
         return f"User(id={self.id!r}, Name={self.conf_name!r} E-Mail={self.email!r}"
@@ -66,7 +68,7 @@ class Task(Base):
     second_date = Column(DateTime, nullable=True,)
     is_done = Column(Boolean, nullable=False)
     first_seen = Column(DateTime(), default=func.now())
-    last_crawled = Column(DateTime(), onupdate=func.now(), nullable=True)
+    last_crawled = Column(DateTime(), onupdate=func.now(), nullable=True, index=True)
     task_description = Column(String(), nullable=True)
     # age = column_property(func.now() - due_date) --> Doesn't work. Gives "1"
 
@@ -105,8 +107,8 @@ class Page(Base):
     page_link = Column(String(100), nullable=False)
     page_name = Column(String(200), nullable=False)
     page_id = Column(Integer, nullable=True)
-    space = Column(String(50), nullable=True)  # True because Space is not known during initial creation.
-    last_crawled = Column(DateTime, onupdate=func.now(), nullable=False)
+    space = Column(String(50), nullable=True, index=True)  # True because Space is not known during initial creation.
+    last_crawled = Column(DateTime, onupdate=func.now(), nullable=False, index=True)
 
     def __init__(self, page_link, page_name):
         self.page_link = page_link

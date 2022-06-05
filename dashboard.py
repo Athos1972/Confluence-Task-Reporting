@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 
 import dash
 import dash_bootstrap_components as dbc
@@ -15,7 +15,7 @@ explorer = Explorer.TaskExploring(db_connection)
 
 companies = [None] + explorer.get_companies()
 spaces = [None] + explorer.get_spaces()
-explorer.init_user_companies()
+# not needed anymore - done in User-Class explorer.init_user_companies()
 
 open_tasks_per_space = reporter.task_count_by_space()
 open_overdue_tasks_per_space = reporter.task_overdue_count_by_space()
@@ -29,7 +29,7 @@ PAGE_SIZE = 25
 ACTIVE_PAGE = 1
 grid_data = explorer.get_task_view()
 MAX_PAGES = len(grid_data) // 25
-page_links = grid_data["page_link"].values
+page_links = grid_data["Page"].values
 page_names = grid_data["page_name"].values
 internal_ids = grid_data["task_internal_id"].values
 
@@ -45,10 +45,10 @@ for i in range(len(page_names)):
         id=f"select&{internal_ids[i]}",
         value=False, ))
 
-grid_data = grid_data.drop(['page_link', 'task_internal_id', 'page_name'], axis=1)
+grid_data = grid_data.drop(['Page', 'task_internal_id', 'page_name'], axis=1)
 
-grid_data["page_name"] = page_hyperlinks
-grid_data["check"] = task_selectors
+grid_data["Page"] = page_hyperlinks
+grid_data["+/-"] = task_selectors
 
 grid_data = grid_data.reset_index(drop=True)
 
@@ -63,6 +63,7 @@ space_overdue_tasks_card = dbc.Card(
                    ),
         ]
     ),
+    color="light",
     className="w-100",
 )
 
@@ -75,6 +76,7 @@ company_overdue_tasks_card = dbc.Card(
                    ),
         ]
     ),
+    color="dark",
     className="w-100"
 )
 
@@ -178,6 +180,8 @@ def change_page(page):
      Input(component_id='selectSpace', component_property='value'),
      Input(component_id='checkOverdue', component_property='value')]
 )
+
+
 def select_options(selected_company, selected_space, checked_overdue):
     global active_space, active_company, overdue, open_tasks_per_space_data, open_tasks_per_space, \
         open_overdue_tasks_per_space, OpenTasksPerSpaceFig, space_overdue_tasks_card, company_overdue_tasks_card, \
@@ -201,6 +205,7 @@ def select_options(selected_company, selected_space, checked_overdue):
                                    ),
                         ]
                     ),
+                    color="light",
                     className="w-100"
                 )
             else:
@@ -213,6 +218,7 @@ def select_options(selected_company, selected_space, checked_overdue):
                                    ),
                         ]
                     ),
+                    color="light",
                     className="w-100",
                 )
         elif input_id == "selectCompany":
@@ -231,6 +237,7 @@ def select_options(selected_company, selected_space, checked_overdue):
                                    ),
                         ]
                     ),
+                    color="dark", invers=True,
                     className="w-100",
                 )
             else:
@@ -243,6 +250,7 @@ def select_options(selected_company, selected_space, checked_overdue):
                                    ),
                         ]
                     ),
+                    color="dark", invers=True,
                     className="w-100"
                 )
         elif input_id == "checkOverdue":
@@ -262,15 +270,15 @@ def select_options(selected_company, selected_space, checked_overdue):
 
         filtered_grid = grid_data
         if selected_space:
-            filtered_grid = filtered_grid[filtered_grid["page_space"] == selected_space]
+            filtered_grid = filtered_grid[filtered_grid["Space"] == selected_space]
             MAX_PAGES = len(filtered_grid) // PAGE_SIZE
 
         if selected_company:
-            filtered_grid = filtered_grid[filtered_grid["user_company"] == selected_company]
+            filtered_grid = filtered_grid[filtered_grid["Company"] == selected_company]
             MAX_PAGES = len(filtered_grid) // PAGE_SIZE
 
         if overdue:
-            filtered_grid = filtered_grid[filtered_grid["task_due_date"] < datetime.now()]
+            filtered_grid = filtered_grid[filtered_grid["Reminder"] < date.now()]
 
     return [
         dbc.Col([html.Strong("Open tasks per space graph")], className="text-center mt-3 pt-3", width=6),

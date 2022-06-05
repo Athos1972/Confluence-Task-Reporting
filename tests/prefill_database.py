@@ -42,9 +42,10 @@ for i in range(1501):
     session.commit()
 
 space_list = [
-    "Project 47",
-    "Project 2",
-    "Project 1",
+    "New Forms",
+    "Operations",
+    "New OS",
+    "New Mobility",
     "MyProject"
 ]
 
@@ -52,7 +53,7 @@ print("creating pages")
 for i in range(1501):
     page = Page(page_link=f"/viewpage.action?pageId={randint(900000,1100000)}",
                 page_name=faker.sentence(nb_words=randint(5,10)))
-    page.space = space_list[randint(0, 3)]
+    page.space = space_list[randint(0, len(space_list)-1)]
     page.page_id = randint(9000000, 11000000)
     session.add(page)
     session.commit()

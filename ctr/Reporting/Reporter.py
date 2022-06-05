@@ -4,8 +4,41 @@ from ctr.Util import logger
 from ctr.Database.connection import SqlConnector
 from ctr.Database.model import Task, User, Page
 from sqlalchemy.sql import func
+from sqlalchemy import distinct
 from datetime import datetime
 import pandas as pd
+
+
+class UserReporting:
+    def __init__(self, db_connection = SqlConnector):
+        self.db_connection = db_connection
+        self.session = self.db_connection.get_session()
+
+    def get_companies(self):
+        stmt = distinct(User.company)
+
+        results = list(self.session.query(stmt))
+
+        q = [row[0] for row in results]
+
+        logger.debug(f"returned {len(q)} entries. Statement was: {str(q)}")
+        return q
+
+
+class PageReporting:
+    def __init__(self, db_connection: SqlConnector):
+        self.db_connection = db_connection
+        self.session = db_connection.get_session()
+
+    def get_spaces(self):
+        stmt = distinct(Page.space)
+
+        results = list(self.session.query(stmt))
+
+        q = [row[0] for row in results]
+
+        logger.debug(f"returned {len(q)} entries. Statement was: {str(q)}")
+        return q
 
 
 class TaskReporting:
@@ -105,4 +138,21 @@ class TaskReporting:
 
         data = {"age": ages, "page_space": spaces}
         return pd.DataFrame(data)
+
+    def get_task_view(self):
+        q = self.session.query(Task.internal_id, Task.task_description, Task.due_date,
+                               Task.second_date,
+                               User.display_name, Page.space, Page.page_name, Page.page_link, User.company). \
+            join(User, Page).where(Page.internal_id == Task.page_link, User.id == Task.user_id, Task.is_done == True)
+
+        logger.debug(f"returned {len(list(q))} entries. Statement was: {str(q)}")
+
+        df = pd.DataFrame(columns=["task_internal_id", "Description", "Reminder", "Due",
+                                   "Name", "Space", "page_name", "Page", "Company"],
+                          data=list(q))
+        # Convert from datetime-Format to date format
+        df["Due"] = pd.to_datetime(df['Due']).dt.date
+        df["Reminder"] = pd.to_datetime(df["Reminder"]).dt.date
+
+        return df
 

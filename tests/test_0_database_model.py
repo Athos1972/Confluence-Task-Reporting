@@ -25,7 +25,7 @@ def test_initial_creation_model():
 
 
 def test_create_initial_user():
-    start_of_test = datetime.utcnow()
+    start_of_test = datetime.utcnow().replace(microsecond=0)
 
     q = session.query(User).filter(User.conf_name=="NBUBEV").first()
     if q:
@@ -35,7 +35,7 @@ def test_create_initial_user():
         q = User(conf_name="NBUBEV", conf_userkey = "", email="franzi@fritzi.com", display_name="nudlaug")
         session.add(q)
     session.commit()
-    assert q.last_crawled > start_of_test
+    assert q.last_crawled >= start_of_test
 
 
 def test_database_model_page_initial_creation():
@@ -120,20 +120,21 @@ def test_task_age():
 def test_user_company_from_email():
     session = db_connection.get_session()
     user = User(conf_name="franzi", conf_userkey="fritzi", email="fritzi@franzi.com", display_name="semmal")
-    assert user.company == "franzi"
+    session.add(user)
+    session.commit()
+    assert user.company == "Franzi"
 
 
 @timeit
 def test_database_model_create_more_entries_for_users(number_of_entries=100):
 
-    x = 0
+    session = db_connection.get_session()
     users_to_add = []
-    while x < number_of_entries:
+    for x in range(100):
         users_to_add.append(User(conf_name=f"{''.join(choices(string.ascii_letters,k=6))}",
                                  conf_userkey="123",
                                  display_name="123123",
                                  email="dummy@dummy.com"))
-        x += 1
 
     session.add_all(users_to_add)
     session.commit()
@@ -144,6 +145,7 @@ def test_database_model_create_more_entries_for_users(number_of_entries=100):
 
 
 if __name__ == '__main__':
+    test_user_company_from_email()
     test_initial_creation_model()
     test_database_model_page_initial_creation()
     test_database_model_user_initial_creation()
@@ -151,6 +153,5 @@ if __name__ == '__main__':
     test_create_initial_user()
     test_task_has_second_date_attribute()
     test_task_has_second_date_attribute_false()
-    test_user_company_from_email()
     test_task_age()
     test_database_model_create_more_entries_for_users(100)

@@ -4,10 +4,10 @@ from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import DateTime
 from sqlalchemy import Boolean
-from sqlalchemy import func
+from sqlalchemy import func, event
+# from sqlalchemy.orm import validates
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship
-from sqlalchemy.orm import column_property
 from sqlalchemy.ext.hybrid import hybrid_property
 from datetime import datetime
 from ctr.Util import logger
@@ -15,14 +15,25 @@ from ctr.Util import logger
 Base = declarative_base()
 
 
-def extract_company_from_email(context):
-    email = context.get_current_parameters()['email']
+def _extract_company_from_email(email:str):
+    """
+    Extracts Company-Name from E-Mail. If length of company-Name is up to 4 digits company name is rendered in upper-
+    case, e.g. Ibm looks weird, IBM looks better. Otherwise first character of company-name is translated to upper case
+    :param email:
+    :return:
+    """
     if not email:
         return ""
     if "@" not in email:
         return ""
 
-    return email.split("@")[1].split(".")[0].title()
+    # "franzi@fritzi.com"
+    company = email.split("@")[1]   #fritzi.com
+    company = company.split(".")[0]  #fritzi
+
+    if len(company) <= 4:
+        return company.upper()
+    return company.title()
 
 
 class ModelDoku:
@@ -39,12 +50,9 @@ class User(Base):
     conf_userkey = Column(String(100), nullable=False)
     display_name = Column(String(100), nullable=True)
     email = Column(String(255), nullable=True)  # Might be filled in later!
-    last_crawled = Column(DateTime(), onupdate=func.now(), default=func.now())
+    last_crawled = Column(DateTime(), server_onupdate=func.now(), server_default=func.now())
     tasks_last_crawled = Column(DateTime(), nullable=True)
-    company = Column(String(100), nullable=True,
-                     default=extract_company_from_email,
-                     onupdate=extract_company_from_email,
-                     index=True)
+    company = Column(String(100), nullable=True, index=True)
 
     def __repr__(self):
         return f"User(id={self.id!r}, Name={self.conf_name!r} E-Mail={self.email!r}"
@@ -55,7 +63,20 @@ class User(Base):
         self.email = email
         self.display_name = display_name
         self.last_crawled = last_crawled
-        self.company = None
+
+
+@event.listens_for(User.email, "set")
+def update_User_email(target, value, oldvalue, initiator):
+    """
+    Listens to changes to "User.email" and writes company-field from these changes.
+    :param target: the User-class
+    :param value: the new value of User.email
+    :param oldvalue: The previous value. Not used so far.
+    :param initiator: not used so far.
+    :return:
+    """
+    target.company = _extract_company_from_email(value)
+    return target
 
 
 class Task(Base):

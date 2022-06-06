@@ -2,6 +2,7 @@ from ctr.Database.connection import SqlConnector
 from ctr.Reporting.Reporter import PageReporting
 from ctr.Reporting.Reporter import UserReporting
 from ctr.Reporting.DashValues import DashValues
+from ctr.Util import logger
 import dash_bootstrap_components as dbc
 from dash import html, dcc, dash_table
 import plotly.express as px
@@ -27,15 +28,18 @@ class DashCards:
         self.dash_values = dash_values
         self.dash_constants = dash_constants
 
-    def get_space_overdue_task_card(self, overdue_value=None):
-        if not overdue_value:
-            overdue_value = "-"
+    @staticmethod
+    def get_space_overdue_task_card(overdue_value=None):
+        if not any(overdue_value):
+            output_overdue_value = 0
+        else:
+            output_overdue_value = int(overdue_value['count'].sum())
 
         card = dbc.Card(
             dbc.CardBody(
                 [
-                    html.H4("Space's Overdue Tasks", className="card-title"),
-                    html.P(html.Center(html.Strong(overdue_value)),
+                    html.H5(html.Center("Space's Tasks"), className="card-title"),
+                    html.P(html.Center(html.Strong(str(output_overdue_value))),
                            className="card-text",
                            ),
                 ]
@@ -46,18 +50,20 @@ class DashCards:
         return card
 
     def get_company_overdue_task_card(self, overdue_value=None):
-        if not overdue_value:
-            overdue_value = "-"
+        if not any(overdue_value):
+            output_overdue_value = 0
+        else:
+            output_overdue_value = int(overdue_value['count'].sum())
         card = dbc.Card(
             dbc.CardBody(
                 [
-                    html.H4("Company's Overdue Tasks", className="card-title"),
-                    html.P(html.Center(html.Strong(overdue_value)),
+                    html.H5(html.Center("Company's Tasks"), className="card-title"),
+                    html.P(html.Center(html.Strong(output_overdue_value)),
                            className="card-text",
                            ),
                 ]
             ),
-            color="dark", inverse=True,
+            color="light",
             className="w-100"
         )
         return card
@@ -66,14 +72,16 @@ class DashCards:
         if not any(tasks_by_age_data):
             tasks_by_age_data = {"age": 0}
         card = dbc.Card(
+            # dbc.CardHeader("Average Task Age"),
             dbc.CardBody(
                 [
-                    html.H4("Average Task Age", className="card-title"),
+                    html.H5(html.Center("Average Task Age"), className="card-title"),
                     html.P(html.Center(html.Strong(f"{int(tasks_by_age_data['age'].mean())} days")),
                            className="card-text",
                            ),
                 ]
             ),
+            color="light",
             className="w-100"
         )
         return card
@@ -125,18 +133,67 @@ class DashCards:
         table = dash_table.DataTable(id="grid-table-inner",
                                      columns=[
                                          {"name": i, "id": i, "presentation": "markdown"}
-                                         for i in self.dash_values.get_grid_data()],
+                                         for i in self.dash_values.get_grid_data(format_of_output=format_of_output)],
                                      data=self.dash_values.get_grid_data(format_of_output="datatable").to_dict(
                                          "records"),
                                      page_size=DashCards.PAGE_SIZE,
                                      sort_action="native",
                                      sort_mode="multi",
-                                     row_selectable="multi")
+                                     row_selectable="multi",
+                                     # fill_width=False,
+                                     style_header=
+                                     { # 'fontWeight': 'bold',
+                                      'fontFamily': 'Arial',
+                                      'border': 'thin lightgrey solid',
+                                      'backgroundColor': 'rgb(100, 100, 100)',
+                                      'color': 'white'
+                                      },
+                                     # style_cell={
+                                     #     'fontFamily': 'Open Sans',
+                                     #     'textAlign': 'left',
+                                     #     'whiteSpace': 'normal',
+                                     #     'overflow': 'hidden',
+                                     #     'textOverflow': 'ellipsis',
+                                     #     'backgroundColor': 'Rgb(230, 230, 250)',
+                                     # },
+                                     # style_data_conditional=[
+                                     #     {
+                                     #         'if ': {'row_index': 'odd'},
+                                     #         'backgroundColor': 'rgb(248, 248, 248)'
+                                     #     },
+                                     #     # {
+                                     #     # 'if ': {'column_id': 'Company'},
+                                     #     # 'backgroundColor': 'rgb(255, 255, 255)',
+                                     #     # 'color': 'black',
+                                     #     # # 'fontWeight': 'bold',
+                                     #     # 'textAlign': 'center'
+                                     #     # }
+                                     # ],
+                                     # fixed_rows={'headers': True, 'data': 0},
+                                     # virtualization=True,
+                                     style_data={
+                                         'whiteSpace': 'normal',
+                                         'height': 'auto',  # Wrap columns
+                                     },
+                                     #                          css=[{
+                                     #                              'selector': '.dash-spreadsheet td div',
+                                     #                              'rule': '''
+                                     #     line-height: 15px;
+                                     #     max-height: 30px; min-height: 30px; height: 30px;
+                                     #     display: block;
+                                     #     overflow-y: hidden;
+                                     # '''
+                                     #                          }],
+                                     # style_table={
+                                     #     'overflowX': 'auto',
+                                     #     'width': '100%',
+                                     #     'margin': 'auto'}
+                                     )
         return table
 
     def get_datatable_column(self, format_of_output="datatable"):
         if format_of_output == "datatable":
-            table = self.get_datatable_element()
+            table = self.get_datatable_element(format_of_output=format_of_output)
             column = dbc.Col(table, className="mt-3", width=12, id="grid-table")
             return column
         elif format_of_output == "table":
@@ -160,19 +217,18 @@ class DashCards:
                         width=6),
                 dbc.Col([dcc.Graph(figure=self.get_open_tasks_per_space_fig())], width=6),
                 dbc.Col([dcc.Graph(figure=self.get_open_tasks_per_company_fig())], width=6),
-                dbc.Col([self.get_space_overdue_task_card()], width=3),
-                dbc.Col([self.get_company_overdue_task_card()], width=3),
+                dbc.Col([self.get_space_overdue_task_card(self.dash_values.get_open_tasks_per_space())], width=3),
+                dbc.Col([self.get_company_overdue_task_card(self.dash_values.get_task_count_by_company())], width=3),
                 dbc.Col([self.get_task_average_time_card(self.dash_values.get_tasks_age())], width=3),
                 dbc.Col([
                     dbc.Button(id="btn_send_reminder", children=["Send Reminder"], className="w-100 h-60",
                                n_clicks=0)
                 ], width=3),
                 self.get_datatable_column(),
-                # className="mt-3", width = 12
             ]
         except Exception as ex:
-            print("Exception during Structure-Creation: {ex}")
-            pass
+            logger.critical(f"Exception during Structure Creation: {ex}")
+
         return structure
 
     def get_layout(self):
@@ -194,18 +250,16 @@ class DashCards:
                 # charts
                 dbc.Row(self.get_chart_rows(),
                         id="dashboard"),
-                # dbc.Row(self.get_datatable_column()),  # Was the datatable too deep in the previous row?
-                dbc.Pagination(id="pagination",
-                               min_value=1,
-                               max_value=self.dash_values.get_max_pages(),
-                               className="justify-content-center",
-                               fully_expanded=False,
-                               first_last=True,
-                               previous_next=True)
+                # dbc.Row(self.get_datatable_column())
+                # dbc.Pagination(id="pagination",
+                #                min_value=1,
+                #                max_value=self.dash_values.get_max_pages(),
+                #                className="justify-content-center",
+                #                fully_expanded=False,
+                #                first_last=True,
+                #                previous_next=True)
             ]
 
         )
-
-        # layout = html.Div([self.get_datatable_element(), html.Div(id="datatable_layout_container")])
 
         return layout

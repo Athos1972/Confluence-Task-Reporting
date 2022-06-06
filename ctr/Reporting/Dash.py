@@ -86,15 +86,21 @@ class DashCards:
         )
         return card
 
-    def get_space_selector(self):
-        selector = dbc.InputGroup(
-            [dbc.InputGroupText("Space"),
-             dbc.Select(id="selectSpace",
-                        value=None,
-                        options=[{"label": space, "value": space} for space in self.dash_constants.get_spaces()])],
-            className="mb-3")
-
-        return selector
+    def get_space_selector(self, type="Select"):
+        if type == "Dropdown":
+            # FIXME: Works but looks terrible. The DIV should look nicer. Also no callback implemented yet.
+            selector = html.Div([
+                "Select space(s)",
+            dcc.Dropdown(self.dash_constants.get_spaces()[1:], id="space_selector", multi=True),])
+            return selector
+        elif type == "Select":
+            selector = dbc.InputGroup(
+                [dbc.InputGroupText("Space"),
+                 dbc.Select(id="selectSpace",
+                            value=None,
+                            options=[{"label": space, "value": space} for space in self.dash_constants.get_spaces()])],
+                className="mb-3")
+            return selector
 
     def get_company_selector(self):
         selector = dbc.InputGroup(

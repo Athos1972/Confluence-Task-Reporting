@@ -3,7 +3,7 @@ from ctr.Reporting.Reporter import PageReporting
 from ctr.Reporting.Reporter import UserReporting
 from ctr.Reporting.DashValues import DashValues
 import dash_bootstrap_components as dbc
-from dash import html, dcc
+from dash import html, dcc, dash_table
 import plotly.express as px
 
 
@@ -105,65 +105,77 @@ class DashCards:
             className="mt-2")
         return element
 
-    def get_open_tasks_per_space_fig(self, overdue=False):
-        fig = px.bar(data_frame=self.dash_values.get_open_tasks_per_space(overdue=overdue),
+    def get_open_tasks_per_space_fig(self):
+        fig = px.bar(data_frame=self.dash_values.get_open_tasks_per_space(),
                      x='space',
                      y='count',
                      color='space',
                      hover_data=['space'])
         return fig
 
-    def get_open_tasks_per_company_fig(self, overdue=False):
-        fig = px.bar(data_frame=self.dash_values.get_task_count_by_company(overdue=overdue),
+    def get_open_tasks_per_company_fig(self):
+        fig = px.bar(data_frame=self.dash_values.get_task_count_by_company(),
                      x='company',
                      y='count',
                      color='company',
                      hover_data=['company'])
         return fig
 
-    def get_datatable_column(self):
-        from dash import dash_table
+    def get_datatable_element(self, format_of_output="datatable"):
         table = dash_table.DataTable(id="grid-table-inner",
                                      columns=[
-                                         {"name": i, "id": i} for i in self.dash_values.get_grid_data()],
-                                     data=self.dash_values.get_grid_data().to_dict("records"),
+                                         {"name": i, "id": i, "presentation": "markdown"}
+                                         for i in self.dash_values.get_grid_data()],
+                                     data=self.dash_values.get_grid_data(format_of_output="datatable").to_dict(
+                                         "records"),
                                      page_size=DashCards.PAGE_SIZE,
                                      sort_action="native",
-                                     sort_mode="multi")
-        column = dbc.Col([table], className="mt-3", width=12, id="grid-table")
-        return column
+                                     sort_mode="multi",
+                                     row_selectable="multi")
+        return table
 
-        column = dbc.Col([
-            dbc.Table.from_dataframe(self.dash_values.get_grid_data()[:DashCards.PAGE_SIZE],
-                                     striped=True,
-                                     bordered=True,
-                                     hover=True,
+    def get_datatable_column(self, format_of_output="datatable"):
+        if format_of_output == "datatable":
+            table = self.get_datatable_element()
+            column = dbc.Col(table, className="mt-3", width=12, id="grid-table")
+            return column
+        elif format_of_output == "table":
+            column = dbc.Col([
+                dbc.Table.from_dataframe(
+                    self.dash_values.get_grid_data(format_of_output=format_of_output)[:DashCards.PAGE_SIZE],
+                    striped=True,
+                    bordered=True,
+                    hover=True,
+                ),
+            ], className="mt-3", width=12, id="grid-table",
+            )
+            return column
 
-                                     ),
-        ], className="mt-3", width=12, id="grid-table",
-        )
-        return column
+    def get_chart_rows(self):
+        try:
+            structure = [
+                dbc.Col([html.Strong("Open tasks per space")], className="text-center mt-3 pt-3",
+                        width=6),
+                dbc.Col([html.Strong("Open tasks per company")], className="text-center mt-3 pt-3",
+                        width=6),
+                dbc.Col([dcc.Graph(figure=self.get_open_tasks_per_space_fig())], width=6),
+                dbc.Col([dcc.Graph(figure=self.get_open_tasks_per_company_fig())], width=6),
+                dbc.Col([self.get_space_overdue_task_card()], width=3),
+                dbc.Col([self.get_company_overdue_task_card()], width=3),
+                dbc.Col([self.get_task_average_time_card(self.dash_values.get_tasks_age())], width=3),
+                dbc.Col([
+                    dbc.Button(id="btn_send_reminder", children=["Send Reminder"], className="w-100 h-60",
+                               n_clicks=0)
+                ], width=3),
+                self.get_datatable_column(),
+                # className="mt-3", width = 12
+            ]
+        except Exception as ex:
+            print("Exception during Structure-Creation: {ex}")
+            pass
+        return structure
 
-    def get_chart_rows(self, spaces, companies, overdue):
-        return [
-            dbc.Col([html.Strong("Open tasks per space")], className="text-center mt-3 pt-3",
-                    width=6),
-            dbc.Col([html.Strong("Open tasks per company")], className="text-center mt-3 pt-3",
-                    width=6),
-            dbc.Col([dcc.Graph(figure=self.get_open_tasks_per_space_fig())], width=6),
-            dbc.Col([dcc.Graph(figure=self.get_open_tasks_per_company_fig())], width=6),
-            dbc.Col([self.get_space_overdue_task_card()], width=3),
-            dbc.Col([self.get_company_overdue_task_card()], width=3),
-            dbc.Col([self.get_task_average_time_card(self.dash_values.get_tasks_age(overdue=True))], width=3),
-            dbc.Col([
-                dbc.Button(id="btn_send_reminder", children=["Send Reminder"], className="w-100 h-100",
-                           n_clicks=0)
-            ], width=3),
-            self.get_datatable_column(),
-            # className="mt-3", width = 12
-        ]
-
-    def get_layout(self, spaces, companies, overdue):
+    def get_layout(self):
         selectCompany = self.get_company_selector()
         selectSpace = self.get_space_selector()
         checkOverdue = self.get_overdue_checkbox()
@@ -180,8 +192,9 @@ class DashCards:
                     className="pt-3"
                 ),
                 # charts
-                dbc.Row(self.get_chart_rows(spaces=spaces, companies=companies, overdue=overdue),
+                dbc.Row(self.get_chart_rows(),
                         id="dashboard"),
+                # dbc.Row(self.get_datatable_column()),  # Was the datatable too deep in the previous row?
                 dbc.Pagination(id="pagination",
                                min_value=1,
                                max_value=self.dash_values.get_max_pages(),
@@ -192,4 +205,7 @@ class DashCards:
             ]
 
         )
+
+        # layout = html.Div([self.get_datatable_element(), html.Div(id="datatable_layout_container")])
+
         return layout

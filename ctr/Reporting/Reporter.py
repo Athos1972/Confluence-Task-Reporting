@@ -5,8 +5,29 @@ from ctr.Database.connection import SqlConnector
 from ctr.Database.model import Task, User, Page
 from sqlalchemy.sql import func
 from sqlalchemy import distinct
+from sqlite3 import ProgrammingError
 from datetime import datetime
 import pandas as pd
+import functools
+
+
+def catch_sql_error(func):
+    """
+    Decorator for DB-Functions to catch DB-Errors
+    :param args:
+    :param kwargs:
+    :return:
+    """
+    @functools.wraps(func)
+    def _retry(self, *args, **kwargs):
+        try:
+            return func(self, *args, **kwargs)
+        except ProgrammingError as ex:
+            logger.warning(f"Cought SQLite ProgammingError during {self.__name__}: {ex}")
+        except Exception as ex:
+            logger.warning(f"Cought other error: {ex}")
+
+    return _retry
 
 
 class UserReporting:
@@ -14,6 +35,7 @@ class UserReporting:
         self.db_connection = db_connection
         self.session = self.db_connection.get_session()
 
+    @catch_sql_error
     def get_companies(self):
         stmt = distinct(User.company)
 
@@ -30,6 +52,7 @@ class PageReporting:
         self.db_connection = db_connection
         self.session = db_connection.get_session()
 
+    @catch_sql_error
     def get_spaces(self):
         stmt = distinct(Page.space)
 
@@ -45,6 +68,7 @@ class TaskReporting:
     def __init__(self, db_connection: SqlConnector):
         self.db_connection = db_connection
 
+    @catch_sql_error
     def task_count_by_space(self, filter_spaces, filter_overdue):
         session = self.db_connection.get_session()
         if not filter_overdue:
@@ -114,6 +138,7 @@ class TaskReporting:
         q = session.query(User.company).distinct()
         return pd.DataFrame(columns=["company"], data=list(q))
 
+    @catch_sql_error
     def tasks_by_age_and_space(self, filter_overdue):
         if not filter_overdue:
             stmt = """select age, page_space from 
@@ -129,8 +154,8 @@ class TaskReporting:
                     """
         session = self.db_connection.get_session()
         q = session.execute(stmt)
-        # logger.debug(f"returned {len(list(q))} entries. Statement was {str(q)}")
         result = list(q)
+        logger.debug(f"returned {len(result)} entries. Statement was {stmt}")
         ages = []
         spaces = []
         for i in range(len(result)):
@@ -140,6 +165,7 @@ class TaskReporting:
         data = {"age": ages, "page_space": spaces}
         return pd.DataFrame(data)
 
+    @catch_sql_error
     def get_task_view(self):
         session = self.db_connection.get_session()
         q = session.query(Task.internal_id, Task.task_description, Task.due_date,

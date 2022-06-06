@@ -41,7 +41,8 @@ class DashValues:
                                                    filter_overdue=self.filter_overdue)
 
     def get_tasks_age(self):
-        return self.reporter.tasks_by_age_and_space(filter_overdue=self.filter_overdue)
+        x = self.reporter.tasks_by_age_and_space(filter_overdue=self.filter_overdue)
+        return x
 
     def get_task_view(self):
         return self.reporter.get_task_view()
@@ -79,7 +80,6 @@ class DashValues:
                 logger.critical(f"Format of output-table unknown: {format_of_output}. Page-names will be empty.")
             # Build task selector cell/column
 
-
         grid_data = grid_data.drop(['Page', 'task_internal_id', 'page_name'], axis=1)
 
         grid_data["Page"] = page_hyperlinks
@@ -96,7 +96,7 @@ class DashValues:
             grid_data = grid_data[grid_data["Company"].isin(self.filter_companies)]
 
         if self.filter_overdue:
-            grid_data = grid_data[grid_data["Reminder"] < date.now()]
+            grid_data = grid_data[grid_data["Reminder"] < date.today()]
 
         self.max_pages = len(grid_data) // 25
 

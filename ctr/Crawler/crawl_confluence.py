@@ -52,7 +52,10 @@ class UserWrapper(Wrapper):
         if found_user.count() > 0:
             # User exists already in Database.
             found_user[0].last_crawled = datetime.now()
-            logger.debug(f"user {found_user[0].conf_name} existed. Updated last_crawled-Timestamp")
+            found_user[0].email = self.email
+            found_user[0].display_name = self.display_name
+            found_user[0].conf_userkey = self.confluence_userkey
+            logger.debug(f"user {found_user[0].conf_name} existed. Updated last_crawled-Timestamp, E-Mail and Name")
             self.session.commit()
             return found_user[0].id
         else:
@@ -469,7 +472,7 @@ class CrawlConfluence:
             else:
                 start += limit
 
-            if len(results_found) >= (max_entries+original_start_number):
+            if len(results_found) >= (max_entries):
                 # Exit when we received max_entries_users entries (+ Start-value ;-) )
                 break
 

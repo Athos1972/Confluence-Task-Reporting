@@ -19,8 +19,8 @@ def test_tasks_for_single_user():
     Tests wheter for a specific user we receive 10 Tasks as a result when we request 10 tasks
     :return:
     """
-    result = test_instance.crawl_tasks_for_user("NBUBEV", limit=5, max_entries=10)
-    assert len(result) == 10
+    result = test_instance.crawl_tasks_for_user("NBUBEV", limit=2, max_entries=4)
+    assert len(result) == 4
 
 
 def test_task_wapper_new_task_short_date():
@@ -31,7 +31,7 @@ def test_task_wapper_new_task_short_date():
 
     wrapper = TaskWrapper(username="Testfranzi",
                           global_id=123,
-                          due_date="15 Feb 2022",
+                          reminder_date="15 Feb 2022",
                           page_name="Franziska 4711",
                           task_description="123",
                           task_id="1234",
@@ -39,6 +39,7 @@ def test_task_wapper_new_task_short_date():
                           db_connection=db_connection)
     x = wrapper.update_task_in_database()
     assert x > 0
+
 
 def test_task_wapper_new_task_long_date():
     """
@@ -48,7 +49,7 @@ def test_task_wapper_new_task_long_date():
 
     wrapper = TaskWrapper(username="Testfranzi",
                           global_id=123,
-                          due_date="15 February 2022",
+                          reminder_date="15 February 2022",
                           page_name="Franziska 4711",
                           task_description="123",
                           task_id = 123,
@@ -56,6 +57,7 @@ def test_task_wapper_new_task_long_date():
                           db_connection=db_connection)
     x = wrapper.update_task_in_database()
     assert x > 0
+
 
 @timeit
 def test_task_wrapper_multiple(tasks_to_create=10):

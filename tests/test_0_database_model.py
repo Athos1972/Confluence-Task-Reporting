@@ -8,14 +8,14 @@ from ctr.Util import global_config
 from ctr.Database.connection import SqlConnector
 from ctr.Database.model import CreateTableStructures
 from ctr.Database.model import User, Task, Page
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from random import choices
 import string
 from ctr.Util import logger, timeit
 from pathlib import Path
 
 Util.load_env_file()
-db_connection = SqlConnector(file=f"sqlite:///{Path.cwd().joinpath('testdatabase.db')}")
+db_connection = SqlConnector(file=f"sqlite:///{Path.cwd().joinpath('testdatabase.db')}?check_same_thread=False")
 session = db_connection.get_session()
 
 
@@ -71,8 +71,8 @@ def test_database_model_task_initial_creation():
     session = db_connection.get_session()
 
     lNew = Task(global_id=123)
-    lNew.due_date = datetime.now()
-    lNew.second_date = datetime.now()
+    lNew.reminder_date = date.today()
+    lNew.second_date = date.today()
     lNew.is_done = False
     lNew.task_id = 123354
     lNew.page_link = "dummydummy"
@@ -82,6 +82,26 @@ def test_database_model_task_initial_creation():
     session.add(lNew)
     session.commit()
     assert lNew.internal_id
+    assert lNew.due_date == lNew.second_date
+
+
+def test_task_due_date_is_reminder_date():
+    lNew = Task(global_id=1200)
+    lNew.reminder_date = date(year=2022, month=12, day=10)
+    lNew.second_date = date(year=2022, month=12, day=13)
+    lNew.is_done = False
+    lNew.task_id = 123
+    lNew.page_link = "dummydummy"
+    lNew.user = session.query(User).first()
+    lNew.page = session.query(Page).first()
+
+    session.add(lNew)
+    session.commit()
+    assert lNew.due_date == lNew.reminder_date
+
+    lNew.second_date = date(year=2022, month=10, day=10)
+    session.commit()
+    assert lNew.due_date == lNew.second_date
 
 
 def test_task_has_second_date_attribute():
@@ -107,7 +127,7 @@ def test_task_age():
     task = Task(global_id=12345)
     task.is_done = False
     task.task_id = 1234
-    task.due_date = datetime.now() - timedelta(days=1)
+    task.reminder_date = datetime.now() - timedelta(days=1)
     task.page_link = session.query(Task).first().page_link
     session.add(task)
     session.commit()
@@ -145,6 +165,7 @@ def test_database_model_create_more_entries_for_users(number_of_entries=100):
 
 
 if __name__ == '__main__':
+    test_task_due_date_is_reminder_date()
     test_user_company_from_email()
     test_initial_creation_model()
     test_database_model_page_initial_creation()

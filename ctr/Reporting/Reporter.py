@@ -76,16 +76,16 @@ class TaskReporting:
         else:
             date_to_filter = datetime.now()
         if not filter_spaces or len("".join(filter_spaces)) == 0:
-            q = session.query(func.count(Task.due_date), Page.space). \
+            q = session.query(func.count(Task.reminder_date), Page.space). \
                 join(Page). \
                 filter(Task.is_done == False,
-                       Task.due_date < date_to_filter). \
+                       Task.reminder_date < date_to_filter). \
                 group_by(Page.space)
         else:
-            q = session.query(func.count(Task.due_date), Page.space). \
+            q = session.query(func.count(Task.reminder_date), Page.space). \
                 join(Page). \
                 filter(Task.is_done == False,
-                       Task.due_date < date_to_filter,
+                       Task.reminder_date < date_to_filter,
                        Page.space.in_(filter_spaces)). \
                 group_by(Page.space)
 
@@ -105,7 +105,7 @@ class TaskReporting:
         session = self.db_connection.get_session()
         q = session.query(User.display_name, func.count(Task.internal_id)). \
             join(Task). \
-            filter(Task.is_done == False, Task.due_date < datetime.now()). \
+            filter(Task.is_done == False, Task.reminder_date < datetime.now()). \
             group_by(User.display_name)
         logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
         return q
@@ -120,14 +120,14 @@ class TaskReporting:
             q = session.query(func.count(Task.internal_id), User.company). \
                 join(Task). \
                 filter(Task.is_done == False,
-                       Task.due_date < date_to_filter). \
+                       Task.reminder_date < date_to_filter). \
                 group_by(User.company)
         else:
             q = session.query(func.count(Task.internal_id), User.company). \
                 join(Task). \
                 filter(Task.is_done == False,
                        User.company.in_(filter_companies),
-                       Task.due_date < date_to_filter). \
+                       Task.reminder_date < date_to_filter). \
                 group_by(User.company)
 
         logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
@@ -142,15 +142,15 @@ class TaskReporting:
     def tasks_by_age_and_space(self, filter_overdue):
         if not filter_overdue:
             stmt = """select age, page_space from 
-                    (SELECT round(julianday(CURRENT_TIMESTAMP) - julianday(tasks.due_date),0) AS age, 
+                    (SELECT round(julianday(CURRENT_TIMESTAMP) - julianday(tasks.reminder_date),0) AS age, 
                     pages.space AS page_space FROM tasks JOIN pages ON pages.internal_id = tasks.page_link 
-                    WHERE tasks.is_done = 0 AND tasks.due_date) group by age
+                    WHERE tasks.is_done = 0 AND tasks.reminder_date) group by age
                     """
         else:
             stmt = """select age, page_space from 
-                    (SELECT round(julianday(CURRENT_TIMESTAMP) - julianday(tasks.due_date),0) AS age, 
+                    (SELECT round(julianday(CURRENT_TIMESTAMP) - julianday(tasks.reminder_date),0) AS age, 
                     pages.space AS page_space FROM tasks JOIN pages ON pages.internal_id = tasks.page_link 
-                    WHERE tasks.is_done = 0 AND tasks.due_date < DATE()) group by age
+                    WHERE tasks.is_done = 0 AND tasks.reminder_date < DATE()) group by age
                     """
         session = self.db_connection.get_session()
         q = session.execute(stmt)
@@ -168,7 +168,7 @@ class TaskReporting:
     @catch_sql_error
     def get_task_view(self):
         session = self.db_connection.get_session()
-        q = session.query(Task.internal_id, Task.task_description, Task.due_date,
+        q = session.query(Task.internal_id, Task.task_description, Task.reminder_date,
                           Task.second_date,
                           User.display_name, Page.space, Page.page_name, Page.page_link, User.company). \
             join(User, Page).where(Page.internal_id == Task.page_link, User.id == Task.user_id, Task.is_done == True)

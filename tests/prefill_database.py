@@ -3,7 +3,7 @@ from ctr.Util import global_config
 from ctr.Database.connection import SqlConnector
 from ctr.Database.model import CreateTableStructures
 from ctr.Database.model import User, Task, Page
-from datetime import datetime, timedelta
+from datetime import datetime, date
 from random import choices
 from faker import Faker
 import string
@@ -58,6 +58,7 @@ for i in range(1501):
     session.add(page)
     session.commit()
 
+
 print("Creating tasks")
 for i in range(3000):
     page_link = randint(0, 1500)
@@ -74,7 +75,9 @@ for i in range(3000):
     task.is_done = True if randint(1, 100) % 2 == 0 else False
     if p:
         task.user_id = p.id
-    task.due_date = datetime.datetime(randint(2020, 2024), randint(1, 12), randint(1, 26))
+    task.reminder_date = date(year=randint(2020, 2024), month=randint(1, 12), day=randint(1, 26))
+    if i %3 == 0:
+        task.second_date = date(year=randint(2020, 2024), month=randint(1, 12), day=randint(1, 26))
 
     session.add(task)
     session.commit()

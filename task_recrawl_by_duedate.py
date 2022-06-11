@@ -13,8 +13,8 @@ if __name__ == '__main__':
     q = session.query(Task.internal_id, Task.task_id, Task.is_done, User.conf_name, Page.page_id, Page.page_name)\
         .join(Page)\
         .join(User)\
-        .filter(Task.due_date)\
-        .order_by(Task.due_date)
+        .filter(Task.reminder_date)\
+        .order_by(Task.reminder_date)
     subquery_session = db_connection.get_session()
 
     for record in q:
@@ -25,9 +25,9 @@ if __name__ == '__main__':
         else:
             time_element = soup.find("time")
             if time_element:
-                due_date = datetime.strptime(time_element.attrs["datetime"], "%Y-%m-%d")
+                reminder_date = datetime.strptime(time_element.attrs["datetime"], "%Y-%m-%d").date()
             else:
-                due_date = None
+                reminder_date = None
             wrapper = TaskWrapper(username=record.conf_name,
                                   global_id=task.global_id,
                                   page_link=task.page_link,
@@ -35,7 +35,7 @@ if __name__ == '__main__':
                                   task_id=task.task_id,
                                   task_description=str(soup),
                                   is_done=True if soup.find("ac:task-status").text == "incomplete" else False,
-                                  due_date=due_date)
+                                  reminder_date=reminder_date)
             wrapper.update_task_in_database()
 
         subquery_session.commit()

@@ -1,7 +1,7 @@
 from atlassian import Confluence
 from ctr.Util import global_config, logger, timeit
 from os import environ
-from datetime import datetime
+from datetime import datetime, date
 from ctr.Util.Util import Util as UUtil
 import requests
 import sys
@@ -70,12 +70,12 @@ class UserWrapper(Wrapper):
 class TaskWrapper(Wrapper):
 
     def __init__(self, username, global_id, task_id, page_link, page_name, task_description, db_connection: SqlConnector = None,
-                 is_done: bool = False, due_date=None):
+                 is_done: bool = False, reminder_date=None):
         super().__init__(db_connection=db_connection)
         self.username = username
         self.global_id = global_id
         self.task_id = task_id
-        self.due_date = due_date
+        self.reminder_date = reminder_date
         self.is_done = is_done
         self.page_link = page_link
         self.page_name = page_name
@@ -95,7 +95,7 @@ class TaskWrapper(Wrapper):
             self.session.add(new_task)
 
         # These attributes may have changed since last crawl:
-        new_task.due_date = self._convert_confluence_due_date_to_datetime(self.due_date)
+        new_task.reminder_date = self._convert_confluence_dateformat_to_date(self.reminder_date)
         new_task.is_done = self.is_done
         new_task.task_description = self.task_description
         new_task.task_id = self.task_id
@@ -149,7 +149,7 @@ class TaskWrapper(Wrapper):
         """
         x = soup.find_all("time")
         if len(x) > 1:
-            return datetime.strptime(x[1].attrs["datetime"], "%Y-%m-%d")
+            return datetime.strptime(x[1].attrs["datetime"], "%Y-%m-%d").date()
         return None
 
     def _add_pagelink_from_task(self, new_task, subquery_session):
@@ -164,10 +164,16 @@ class TaskWrapper(Wrapper):
         :param subquery_session: Just a session
         :return:
         """
-        if "focusedTaskId" in self.page_link:
-            self.page_link = self.page_link[:self.page_link.find("focusedTaskId=") - 1]
-        new_task.page_link = subquery_session.query(Page).filter(
-            Page.page_link == self.page_link).first()
+
+        # In the task_html we find a tag data-inline-tasks-content-id, which is the confluence page_id
+        # We can find the HTML in self.task_description. Maybe using this page_id we can find the
+        # existing page in the database.
+        tmp_soup = BeautifulSoup(self.task_description, features="html.parser")
+        task = tmp_soup.findAll("ul")[0]
+        search_page_id = task.attrs['data-inline-tasks-content-id']
+        new_task.page_link = subquery_session.query(Page).filter(Page.page_id == search_page_id).first()
+        logger.debug(f"Found stored Page-Instance via content-id from task")
+
         if not new_task.page_link:
             # If page-Entry doesn't exist yet let's create the page
             logger.debug(f"Page {self.page_name} was not in the database. Creating record.")
@@ -227,7 +233,7 @@ class TaskWrapper(Wrapper):
         return base_string[start_pos:end_pos]
 
     @staticmethod
-    def _convert_confluence_due_date_to_datetime(confluence_date) -> datetime:
+    def _convert_confluence_dateformat_to_date(confluence_date) -> date:
         """
         Confluence date comes as dd month year
         :param confluence_date:
@@ -235,15 +241,15 @@ class TaskWrapper(Wrapper):
         """
         if isinstance(confluence_date, str):
             try:
-                return datetime.strptime(confluence_date, "%d %b %Y")  # Month as abbrevation
+                return datetime.strptime(confluence_date, "%d %b %Y").date()  # Month as abbrevation
             except ValueError:
                 pass
             try:
-                return datetime.strptime(confluence_date, "%d %B %Y")  # Month fully written
+                return datetime.strptime(confluence_date, "%d %B %Y").date()  # Month fully written
             except ValueError:
                 pass
             try:
-                return datetime.strptime(confluence_date, "%Y-%m-%d")  # 2022-05-25
+                return datetime.strptime(confluence_date, "%Y-%m-%d").date()  # 2022-05-25
             except ValueError:
                 logger.critical(f"Dateformat unknown: {confluence_date}. Is it a date??")
                 return None

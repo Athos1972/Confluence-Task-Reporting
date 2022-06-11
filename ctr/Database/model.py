@@ -3,13 +3,14 @@ from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import DateTime
+from sqlalchemy import Date
 from sqlalchemy import Boolean
 from sqlalchemy import func, event
 # from sqlalchemy.orm import validates
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
-from datetime import datetime
+from datetime import datetime, date
 from ctr.Util import logger
 
 Base = declarative_base()
@@ -34,7 +35,6 @@ def _extract_company_from_email(email:str):
     if len(company) <= 4:
         return company.upper()
     return company.title()
-
 
 class ModelDoku:
     """
@@ -84,14 +84,15 @@ class Task(Base):
 
     internal_id = Column(Integer, primary_key=True, autoincrement=True)
     global_id = Column(String(30), nullable=False)
-    task_id = Column(Integer, nullable=False)  # TaskId auf dieser Seite
-    due_date = Column(DateTime, nullable=True)
-    second_date = Column(DateTime, nullable=True,)
+    task_id = Column(Integer, nullable=False)         # TaskId on the current page
+    reminder_date = Column(Date, nullable=True)       # The first date that can be found in a task
+    second_date = Column(Date, nullable=True)         # The second date that can be found in a task
+    due_date = Column(Date, nullable=True)            # Calculated due_date
     is_done = Column(Boolean, nullable=False)
     first_seen = Column(DateTime(), default=func.now())
     last_crawled = Column(DateTime(), onupdate=func.now(), nullable=True, index=True)
     task_description = Column(String(), nullable=True)
-    # age = column_property(func.now() - due_date) --> Doesn't work. Gives "1"
+    # age = column_property(func.now() - reminder_date) --> Doesn't work. Gives "1"
 
     user_id = Column(Integer, ForeignKey("conf_users.id"), nullable=True)
     user = relationship("User", backref="tasks")
@@ -113,12 +114,50 @@ class Task(Base):
 
     @hybrid_property
     def age(self):
-        x = (datetime.now() - self.due_date)
+        x = (date.today() - self.due_date)
         return x
 
     @age.expression
     def age(cls):
+        # FIXME: Works only on SQLITE-DB
         return func.julianday("now") - func.julianday(cls.due_date)
+
+
+@event.listens_for(Task.second_date, "set")
+def update_due_date_from_second_date(target:Task, value, oldvalue, initiator):
+    """
+    If second date (=value) is lower than reminder date then this is the due_date.
+    :param target:
+    :param value:
+    :param oldvalue:
+    :param initiator:
+    :return:
+    """
+    if value:
+        if value < target.reminder_date:
+            target.due_date = value
+            return target
+    return target
+
+
+@event.listens_for(Task.reminder_date, "set")
+def update_due_date_from_reminder_date(target:Task, value, oldvalue, initiator):
+    """
+    Due date is either the second date (if that one is higher than the reminder date) or the reminder date.
+    :param target: the Task-Instance
+    :param value: the new value of Task.reminder_date
+    :param oldvalue:
+    :param initiator:
+    :return: the Task-Instance
+    """
+    if target.second_date:
+        if value > target.second_date:
+            target.due_date = target.second_date
+            return target
+        target.due_date = value
+        return target
+    target.due_date = value
+    return target
 
 
 class Page(Base):

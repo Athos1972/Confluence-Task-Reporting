@@ -24,17 +24,18 @@ def _extract_company_from_email(email:str):
     :return:
     """
     if not email:
-        return ""
+        return "unknown"
     if "@" not in email:
-        return ""
+        return "unknown"
 
     # "franzi@fritzi.com"
     company = email.split("@")[1]   #fritzi.com
     company = company.split(".")[0]  #fritzi
 
     if len(company) <= 4:
-        return company.upper()
+        return company.upper()       #Fritzi
     return company.title()
+
 
 class ModelDoku:
     """
@@ -63,6 +64,7 @@ class User(Base):
         self.email = email
         self.display_name = display_name
         self.last_crawled = last_crawled
+        self.company = "unknown"
 
 
 @event.listens_for(User.email, "set")
@@ -114,7 +116,7 @@ class Task(Base):
 
     @hybrid_property
     def age(self):
-        x = (date.today() - self.due_date)
+        x = (datetimedate.today() - self.due_date)
         return x
 
     @age.expression

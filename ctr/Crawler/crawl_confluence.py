@@ -44,7 +44,7 @@ class UserWrapper(Wrapper):
         super().__init__(db_connection=db_connection)
         self.confluence_name = confluence_name
         self.confluence_userkey = confluence_userkey
-        self.email = email
+        self.email = email or "unknown"
         self.display_name = display_name
 
     def update_user_in_database(self):

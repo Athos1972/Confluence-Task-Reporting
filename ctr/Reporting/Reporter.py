@@ -171,7 +171,7 @@ class TaskReporting:
         q = session.query(Task.internal_id, Task.task_description, Task.reminder_date,
                           Task.second_date,
                           User.display_name, Page.space, Page.page_name, Page.page_link, User.company). \
-            join(User, Page).where(Page.internal_id == Task.page_link, User.id == Task.user_id, Task.is_done == True)
+            join(User, Page).where(Page.internal_id == Task.page_link, User.id == Task.user_id, Task.is_done == False)
 
         logger.debug(f"returned {len(list(q))} entries. Statement was: {str(q)}")
 

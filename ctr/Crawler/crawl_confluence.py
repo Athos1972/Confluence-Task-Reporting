@@ -83,12 +83,26 @@ class TaskWrapper(Wrapper):
 
     def update_task_in_database(self):
         subquery_session = self.db_connection.get_session()
-        found_task = self.session.query(Task).filter(Task.global_id == self.global_id)
-        if found_task.count() > 0:
-            # Task already exists.
-            logger.debug(f"Found entry {found_task[0].internal_id} with global_id = {self.global_id}")
-            new_task = found_task[0]
-        else:
+        new_task = None
+        if self.global_id:
+            # Try finding the existing task record via global_id.
+            found_task = self.session.query(Task).filter(Task.global_id == self.global_id)
+            if found_task.count() > 0:
+                # Task already exists.
+                logger.debug(f"Found entry {found_task[0].internal_id} with global_id = {self.global_id}")
+                new_task = found_task[0]
+        if not new_task:
+            # Could be, that the tasks was crawled from other place where we don't know global_id. Then we might
+            # find it from page_id and task_id combination.
+            found_task = self.session.query(Task).join(Page).\
+                filter(Task.task_id==self.task_id, Page.page_link==self.page_link)
+            if found_task:
+                try:
+                    new_task = found_task[0]
+                except IndexError:
+                    pass
+
+        if not new_task:
             logger.debug(f"New task with global_id = {self.global_id}.")
             new_task = Task(self.global_id)
             new_task = self._add_pagelink_from_task(new_task, subquery_session)
@@ -100,6 +114,9 @@ class TaskWrapper(Wrapper):
         new_task.task_description = self.task_description
         new_task.task_id = self.task_id
         new_task.last_crawled = datetime.now()
+
+        if not new_task.global_id:
+            new_task.global_id = 9999999
 
         new_task = self._derive_attributes_from_task_description(new_task)
 
@@ -175,6 +192,9 @@ class TaskWrapper(Wrapper):
         logger.debug(f"Found stored Page-Instance via content-id from task")
 
         if not new_task.page_link:
+            # If we still have ?|&focusedTaskId= in page_link let's remove it
+            if "focusedTaskId" in self.page_link:
+                self.page_link = self.page_link[:self.page_link.find("focusedTaskId=")-1]
             # If page-Entry doesn't exist yet let's create the page
             logger.debug(f"Page {self.page_name} was not in the database. Creating record.")
             page = Page(page_link=self.page_link,
@@ -277,6 +297,9 @@ class CrawlConfluence:
         sleep(self.sleep_between_tasks)
         return self.session.get(f'{self.confluence_url}/{page_name}')
 
+    def get_confluence_page_via_api(self, page_id):
+        return self.confluence_instance.get_page_by_id(page_id=page_id, expand="body.storage")
+
     def crawl_users(self, limit=10, max_entries=100, start=0):
         """
         Get a List of Users from Confluence. Then read additional details for each user.
@@ -288,6 +311,22 @@ class CrawlConfluence:
         current_confluence_users = self.__repeated_get(url, limit=limit, max_entries=max_entries, start=start)
 
         return current_confluence_users
+
+    def recrawl_page(self, page_id):
+        """
+        Get page from Confluence and transform into soup
+        :param page_id:
+        :return:
+        """
+        page = self.instance.get_page_by_id(page_id=page_id, expand="body.storage")
+        sleep(self.sleep_between_tasks)
+        soup = BeautifulSoup(page["body"]["storage"]["value"], features="html.parser")
+
+        return soup
+
+    def get_tasks_from_confluence_page(self, page_id) -> list:
+        soup = self.recrawl_page(page_id=page_id)
+        return soup.find_all("ac:task")
 
     def recrawl_task(self, page_id, task_id):
         """
@@ -301,12 +340,10 @@ class CrawlConfluence:
         :param task_id:
         :return: is_done. True = done. False = still open
         """
-
-        page = self.instance.get_page_by_id(page_id=page_id, expand="body.storage")
-        sleep(self.sleep_between_tasks)
+        soup = self.recrawl_page(page_id=page_id)
         logger.debug(f"Recrawling task {task_id} from page {global_config.get_config('CONF_BASE_URL')}"
                      f"/pages/viewpage.action?pageId={page_id}")
-        soup = BeautifulSoup(page["body"]["storage"]["value"], features="html.parser")
+
         x = soup.find_all("ac:task")
         for y in x:
             l_id = int(y.find("ac:task-id").text)
@@ -354,16 +391,17 @@ class CrawlConfluence:
         task_list = self.__repeated_get(url=url, limit=limit, max_entries=max_entries, start=start,
                                         start_tag="pageIndex",
                                         limit_tag="pageSize",
-                                        url_append=url_append)
+                                        url_append=url_append,
+                                        paged=True)
 
         logger.debug(f"Found {len(task_list)} tasks for this user")
 
         return task_list
 
     def __repeated_get(self, url, limit, max_entries, start=0, limit_tag="limit", start_tag="start",
-                       url_append="") -> list:
+                       url_append="", paged=False) -> list:
         """
-        Reads from a paged URL until weither max_entries is reached or no more entries can be found.
+        Reads from a paged URL until weither max_entries_users is reached or no more entries can be found.
         :param url: the base URL (without ?<limit_tag>=<limit>&<start_tag>=<start>
         :param limit: the number of records that are requested from the server
         :param max_entries: Up to how many records we should retrieve
@@ -425,9 +463,14 @@ class CrawlConfluence:
                 logger.critical(f"Error when reading url {new_url}. Error was: \n{response.text}")
                 break
 
-            start += limit
-            if start >= (max_entries+original_start_number):
-                # Exit when we received max_entries entries (+ Start-value ;-) )
+            if paged:
+                # In paged-mode we start from page 0, then page 1, etc.
+                start = start + 1
+            else:
+                start += limit
+
+            if len(results_found) >= (max_entries+original_start_number):
+                # Exit when we received max_entries_users entries (+ Start-value ;-) )
                 break
 
             if response.status_code != 200:

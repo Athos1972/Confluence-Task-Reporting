@@ -10,10 +10,10 @@ if __name__ == '__main__':
     crawler = CrawlConfluence()
     # Selektion von Usern basierend auf last_recrawled
     session = db_connection.get_session()
-    q = session.query(Task.internal_id, Task.task_id, Task.is_done, User.conf_name, Page.page_id, Page.page_name)\
-        .join(Page)\
-        .join(User)\
-        .filter(Task.reminder_date)\
+    q = session.query(Task.internal_id, Task.task_id, Task.is_done, User.conf_name, Page.page_id, Page.page_name) \
+        .join(Page) \
+        .join(User) \
+        .filter(Task.reminder_date) \
         .order_by(Task.reminder_date)
     subquery_session = db_connection.get_session()
 
@@ -28,13 +28,14 @@ if __name__ == '__main__':
                 reminder_date = datetime.strptime(time_element.attrs["datetime"], "%Y-%m-%d").date()
             else:
                 reminder_date = None
-            wrapper = TaskWrapper(username=record.conf_name,
+            wrapper = TaskWrapper(db_connection=db_connection,
+                                  username=record.conf_name,
                                   global_id=task.global_id,
                                   page_link=task.page_link,
                                   page_name=record.page_name,
                                   task_id=task.task_id,
                                   task_description=str(soup),
-                                  is_done=True if soup.find("ac:task-status").text == "incomplete" else False,
+                                  is_done=False if soup.find("ac:task-status").text == "incomplete" else True,
                                   reminder_date=reminder_date)
             wrapper.update_task_in_database()
 

@@ -1,23 +1,47 @@
 from ctr.Util.Util import Util
+from ctr.Util import global_config, logger
 from ctr.Crawler.crawl_confluence import CrawlConfluence
 from ctr.Crawler.crawl_confluence import TaskWrapper
 from ctr.Database.connection import SqlConnector
-from ctr.Database.model import User
+from ctr.Database.model import User, Task
+from sqlalchemy.sql import func, text
 from datetime import datetime
+
 
 if __name__ == '__main__':
     db_connection = SqlConnector()
     Util.load_env_file()
     crawler = CrawlConfluence()
-    # Selektion von Usern basierend auf last_recrawled
     session = db_connection.get_session()
-    limit = 20   # page size
-    max_entries = 500
-    # q = session.query(User).order_by(User.last_crawled).limit(limit)
-    q = session.query(User).filter(User.conf_name == "NBUBEV")
+    subsession = db_connection.get_session()
+    limit = 20                     # page size
+    max_entries_users = 500
+    max_entries_tasks = 300
+    # Selektion of Users based on last_recrawled
+    if global_config.get_config("OUWT", optional=False):
+        q = session.query(User.conf_name, User.id, User.tasks_last_crawled, func.count(Task.task_id).
+                          label("counted_tasks")).\
+            join(Task).\
+            group_by(User.conf_name)
+    else:
+        q = session.query(User).order_by(User.tasks_last_crawled).limit(max_entries_users)
+    # q = session.query(User).filter(User.conf_name == "NBUBEV")
+    logger.info(f"Executing Task Crawling for {len(list(q))} User-Records")
     for user in q:
-        tasks = crawler.crawl_tasks_for_user(user.conf_name, limit=limit, max_entries=max_entries, start=0)
-        user.last_crawled = datetime.now()
+        # First let's set all tasks to Completed. Like this we'll "uncomplete" still existing tasks without
+        # having to recrawl tasks that are older
+        updated_records = subsession.execute(f"update Tasks set is_done = True where user_id = {user.id} "
+                                             f"and is_done = False")
+        subsession.commit()
+        logger.info(f"Set {updated_records.rowcount} tasks of User {user.conf_name} to Done before we recrawl.")
+        tasks = crawler.crawl_tasks_for_user(user.conf_name, limit=limit, max_entries=max_entries_tasks, start=0)
+        try:
+            user.tasks_last_crawled = datetime.now()
+        except AttributeError:
+            # We're in the Query-Mode. In this mode we don't have a locked User-Instance, so we update manually:
+            subsession.execute(f"update conf_users set tasks_last_crawled = CURRENT_TIMESTAMP "
+                               f"where conf_users.id = {user.id}")
+            subsession.commit()
         for task in tasks:
             wrapper = TaskWrapper(
                 db_connection=db_connection,
@@ -31,3 +55,4 @@ if __name__ == '__main__':
 
             wrapper.update_task_in_database()
     session.commit()
+    logger.info(f"Finished Task crawling for {len(list(q))} Users.")

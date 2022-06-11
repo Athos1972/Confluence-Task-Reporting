@@ -234,6 +234,7 @@ class DashCards:
             ]
         except Exception as ex:
             logger.critical(f"Exception during Structure Creation: {ex}")
+            return None
 
         return structure
 

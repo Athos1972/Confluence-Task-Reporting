@@ -10,7 +10,7 @@ from sqlalchemy import func, event
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
-from datetime import datetime, date
+from datetime import datetime, date as datetimedate
 from ctr.Util import logger
 
 Base = declarative_base()
@@ -151,7 +151,7 @@ def update_due_date_from_reminder_date(target:Task, value, oldvalue, initiator):
     :return: the Task-Instance
     """
     if target.second_date:
-        if value > target.second_date:
+        if value or datetimedate(year=1972, month=1, day=1) > target.second_date:
             target.due_date = target.second_date
             return target
         target.due_date = value
@@ -166,7 +166,7 @@ class Page(Base):
     internal_id = Column(Integer, primary_key=True, autoincrement=True)
     page_link = Column(String(100), nullable=False)
     page_name = Column(String(200), nullable=False)
-    page_id = Column(Integer, nullable=True)
+    page_id = Column(Integer, nullable=True, unique=True)  # The unique Confluence PageID
     space = Column(String(50), nullable=True, index=True)  # True because Space is not known during initial creation.
     last_crawled = Column(DateTime, onupdate=func.now(), nullable=False, index=True)
 

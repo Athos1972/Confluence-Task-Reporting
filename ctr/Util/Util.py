@@ -10,15 +10,6 @@ class Util:
     """
 
     @staticmethod
-    def get_logger(self):
-        """
-        provides the logger
-        :param self:
-        :return: logger-Instance that was initialized in Util.__init__.py
-        """
-        return logger
-
-    @staticmethod
     def load_env_file():
         """
         Ließt das .env-File und schreibt die beiden Parameter conf_user und conf_pwd in das Environment

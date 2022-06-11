@@ -1,15 +1,33 @@
+# Why?
+Chances are you read this because you have the same problem like many other projects around the globe: Confluence has
+become not only your knowledge management tool but you also use it for task management. Of course there is JIRA for
+developers and teams, but Tasks in Confluence are used for all those other folks who don't directly work in development 
+teams but are also important for the project.
+
+A few months in the journey you become aware that not everybody works properly with their tasks. Occasionally you find
+outdated tasks in old protocols and you think "If I find this one, most probably there are more!". So you fire up the 
+built-in task list feature for all users and you can't believe what you see. 100s or 1000s of overdue tasks, partially
+of people who are not even on the project any more, too many (and no really nice UX from Atlassian in this area) to 
+manually contact everybody.
+
+Either you have a good Project Office, who will chase each individual or you need another solution. Even when they chase
+each person, how do you check success? A weekly report, manually filled by your Project Office colleagues? Don't they
+have more important things to do?
+
+Look no further! Help is here!
+
 # Confluence-Task-Reporting
-Reporting for Tasks (overdue, due soon, etc.) from a confluence on prem server
+Reporting for Tasks (overdue, due soon, etc.) from a confluence on prem server.
 
 Confluence built-in task viewer is great for a single person. Once you have 1000s of Users working in 100s of spaces it 
-becomes tedious to keep track of overdue tasks or low-quality tasks.
+becomes tedious to keep track of overdue or low-quality tasks.
 
 This little script is here to help. Most probably there exist paid plugins/add-ons for Confluence out there, but usually
 they come at some steep license costs. On the other hand they are natively integrated into Confluence and would provide
 much faster and more acurate results - so if you can spend the bucks for such plugins: Go ahead. 
 
-Also on the other hand: When people anyway don't deal with their tasks then why would you need
-real-time reporting on overdue tasks?
+Also on the other hand: When people anyway don't deal with their tasks then why would you need expensive/paid 
+real-time reporting on overdue tasks? Using this script you could have a daily update. Usually that's more than enough.
 
 ## Important notice
 This tool will access only the information that the user stated in the <code>.env</code>-File is authorized to view!
@@ -27,11 +45,14 @@ Another option to consume the results is via a nice little dashboard.
 
 # How to start?
 ## Check prerequisits
-* Python > 3.6 on your computer. To check: <code>python -V</code>
+* You know what Python is
+* You have a confluence on-prem instance
+* You have a working username and password for this instance
+* Python >= 3.6 on your computer. To check fire up your console: <code>python -V</code>
 
 ## Install
 * Hopefully you're comfortable with using the console or command prompt. Otherwise you won't make it. Sorry.
-* Get the repository <code>git clone https://github.com/Athos1972/Confluence-Task-Reporting </code>  
+* Get the repository <code>git clone https://github.com/Athos1972/Confluence-Task-Reporting</code>  
 * Create a file named exactly <code>.env</code> in the root of the downloaded repository.
 * Enter <code>CONF_USER=<your_user_name></code>, <CONF_PWD=<your_password_for_confluence> into the file
 * Enter <code>CONF_BASE_URL="https://<path_to_your_confluence_instance>"</code> into the <code>.env</code> file
@@ -55,15 +76,30 @@ due-date of the tasks as well as the space name.
     seem less suspicious for people analyzing network traffic.
 * Start the dashboard: <code>python dashboard.py</code>. Navigate to URL http://127.0.0.1:8050/ and see the results
 
+# Other stuff
 ## Additional crawlers
 * <code>tasks_recrawl_by_page.py</code> recrawls tasks from previously crawled pages.
 * <code>task_recrawl_by_duedate.py</code> goes through all tasks in the database sorted by last crawl date and.
 analyses those tasks again.
+
 ## Reports
-* Average overdue age distribution (graph)
+* Currently no reports except the dashboard
 
 ## Distribution
-* Via E-Mail as PDF
-* Write result als Confluence page
+* Currently no distribution of results
 
+# Future enhancements/developments
+Also - if you have a good idea for a future feature: please send to buhl @ buhl-consulting.com.cy and let's see what we
+can do about it.
+## Near future
+* Export of dashboard grid to XLS
+* Select not only company and space in Dashboard but also User(s)
+
+## Future
+* Update task contents from the app (click on a task, add a comment)
+* Reminder function via E-Mail (Chose entries from the grid in the dashboard and click on "Send Reminder") to 
+automatically send reminder E-Mails
+  * That's a bit tricky as most Atlassian Customers are Corporations and there will be all kinds of E-Mail-Systems 
+  to deal with. Also we need an easy option to maintain a template text. 
+  * Additional option: "Mailbomb"-Mode to send for each overdue task 1 E-Mail
 

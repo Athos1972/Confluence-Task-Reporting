@@ -13,6 +13,9 @@ from ctr.Database.model import User, Task, Page
 
 
 class Wrapper:
+    """
+    Base-Class for all wrappers.
+    """
     def __init__(self, db_connection: SqlConnector = None):
         if not db_connection:
             self.db_connection = SqlConnector()
@@ -39,6 +42,9 @@ class Wrapper:
 
 
 class UserWrapper(Wrapper):
+    """
+    Class to interface between Database "User" and sources (usually Confluence)
+    """
     def __init__(self, confluence_name, confluence_userkey=None, email=None, display_name=None,
                  db_connection: SqlConnector = None):
         super().__init__(db_connection=db_connection)
@@ -48,6 +54,10 @@ class UserWrapper(Wrapper):
         self.display_name = display_name
 
     def update_user_in_database(self):
+        """
+        Create or update user-Record
+        :return:
+        """
         found_user = self.session.query(User).filter(User.conf_name == self.confluence_name)
         if found_user.count() > 0:
             # User exists already in Database.
@@ -55,7 +65,7 @@ class UserWrapper(Wrapper):
             found_user[0].email = self.email
             found_user[0].display_name = self.display_name
             found_user[0].conf_userkey = self.confluence_userkey
-            logger.debug(f"user {found_user[0].conf_name} existed. Updated last_crawled-Timestamp, E-Mail and Name")
+            logger.debug(f"user_tasks {found_user[0].conf_name} existed. Updated last_crawled-Timestamp, E-Mail and Name")
             self.session.commit()
             return found_user[0].id
         else:
@@ -71,6 +81,9 @@ class UserWrapper(Wrapper):
 
 
 class TaskWrapper(Wrapper):
+    """
+    Class to interface a Task from external sources (only Confluence) with Database-Level
+    """
 
     def __init__(self, username, global_id, task_id, page_link, page_name, task_description, db_connection: SqlConnector = None,
                  is_done: bool = False, reminder_date=None):
@@ -85,46 +98,22 @@ class TaskWrapper(Wrapper):
         self.task_description = task_description
 
     def update_task_in_database(self):
+        """
+        First checks, if the task exists already. Otherwise creates new instance.
+        Updates all fields from source.
+        Derives additional fields from task text
+        :return:
+        """
         subquery_session = self.db_connection.get_session()
-        new_task = None
-        if self.global_id:
-            # Try finding the existing task record via global_id.
-            found_task = self.session.query(Task).filter(Task.global_id == self.global_id)
-            if found_task.count() > 0:
-                # Task already exists.
-                logger.debug(f"Found entry {found_task[0].internal_id} with global_id = {self.global_id}")
-                new_task = found_task[0]
-        if not new_task:
-            # Could be, that the tasks was crawled from other place where we don't know global_id. Then we might
-            # find it from page_id and task_id combination.
-            found_task = self.session.query(Task).join(Page).\
-                filter(Task.task_id==self.task_id, Page.page_link==self.page_link)
-            if found_task:
-                try:
-                    new_task = found_task[0]
-                except IndexError:
-                    pass
+        new_task = self.__get_existing_task()
 
         if not new_task:
-            logger.debug(f"New task with global_id = {self.global_id}.")
-            new_task = Task(self.global_id)
-            new_task = self._add_pagelink_from_task(new_task, subquery_session)
-            self.session.add(new_task)
+            new_task = self.__create_new_task(subquery_session)
 
-        # These attributes may have changed since last crawl:
-        new_task.reminder_date = self._convert_confluence_dateformat_to_date(self.reminder_date)
-        new_task.is_done = self.is_done
-        new_task.task_description = self.task_description
-        new_task.task_id = self.task_id
-        new_task.last_crawled = datetime.now()
-
-        if not new_task.global_id:
-            new_task.global_id = 9999999
-
+        # Update task fields, which are provided in __init__
+        new_task = self.__update_all_fields_in_task(new_task)
+        # Update task fields derived from the task text
         new_task = self._derive_attributes_from_task_description(new_task)
-
-        if new_task.is_done:
-            logger.debug(f"Task {new_task} set to done.")
 
         if self.username:
             try:
@@ -139,6 +128,52 @@ class TaskWrapper(Wrapper):
 
         self.session.commit()
         return new_task.internal_id
+
+    def __get_existing_task(self):
+        new_task = None
+        if self.global_id:
+            # Try finding the existing task record via global_id.
+            found_task = self.session.query(Task).filter(Task.global_id == self.global_id)
+            if found_task.count() > 0:
+                # Task already exists.
+                logger.debug(f"Found entry {found_task[0].internal_id} with global_id = {self.global_id}")
+                new_task = found_task[0]
+        if not new_task:
+            # Could be, that the tasks was crawled from other place where we don't know global_id. Then we might
+            # find it from page_id and task_id combination.
+            found_task = self.session.query(Task).join(Page). \
+                filter(Task.task_id == self.task_id, Page.page_link == self.page_link)
+            if found_task:
+                try:
+                    new_task = found_task[0]
+                except IndexError:
+                    pass
+        return new_task
+
+    def __create_new_task(self, subquery_session):
+        """
+        Creates a new instance of Task-Class
+        :param subquery_session:
+        :return:
+        """
+        logger.debug(f"New task with global_id = {self.global_id}.")
+        new_task = Task(self.global_id)
+        new_task = self._add_pagelink_from_task(new_task, subquery_session)
+        self.session.add(new_task)
+        return new_task
+
+    def __update_all_fields_in_task(self, new_task):
+        # These attributes may have changed since last crawl:
+        new_task.reminder_date = self._convert_confluence_dateformat_to_date(self.reminder_date)
+        new_task.is_done = self.is_done
+        new_task.task_description = self.task_description
+        new_task.task_id = self.task_id
+        new_task.last_crawled = datetime.now()
+
+        if not new_task.global_id:
+            new_task.global_id = 9999999
+
+        return new_task
 
     def _derive_attributes_from_task_description(self, new_task: Task):
         """
@@ -305,7 +340,7 @@ class CrawlConfluence:
 
     def crawl_users(self, limit=10, max_entries=100, start=0):
         """
-        Get a List of Users from Confluence. Then read additional details for each user.
+        Get a List of Users from Confluence. Then read additional details for each user_tasks.
         :return: List of Confluence-Users as dict.
         """
         logger.debug(f"Starting to crawl max {max_entries} Users in slices of {limit}. Start from {start}")
@@ -389,7 +424,7 @@ class CrawlConfluence:
                      f"%22%5D%2C%22assignees%22%3A%5B%22{conf_user_name}%22%5D%2C%22creators%22%3A%5Bnull%5D" \
                      f"%2C%22status%22%3A%22incomplete%22%2C%22sortColumn%22%3A%22duedate%22%2C%22" \
                      f"reverseSort%22%3Afalse%7D"
-        logger.debug(f"Starting task-search for user {conf_user_name}.")
+        logger.debug(f"Starting task-search for user_tasks {conf_user_name}.")
 
         task_list = self.__repeated_get(url=url, limit=limit, max_entries=max_entries, start=start,
                                         start_tag="pageIndex",
@@ -397,7 +432,7 @@ class CrawlConfluence:
                                         url_append=url_append,
                                         paged=True)
 
-        logger.debug(f"Found {len(task_list)} tasks for this user")
+        logger.debug(f"Found {len(task_list)} tasks for this user_tasks")
 
         return task_list
 
@@ -485,9 +520,9 @@ class CrawlConfluence:
 
     def read_userdetails_for_user(self, conf_username):
         try:
-            result = self.session.get(f"{self.confluence_url}/rest/prototype/1/user/non-system/{conf_username}")
+            result = self.session.get(f"{self.confluence_url}/rest/prototype/1/user_tasks/non-system/{conf_username}")
         except ConnectionError as ex:
-            logger.error(f"Connection-Error during fetching user-details of user {conf_username}: {ex}")
+            logger.error(f"Connection-Error during fetching user_tasks-details of user_tasks {conf_username}: {ex}")
             return {}
         # Dieser Aufruf funktioniert noch nicht in der Confluence-Server-Version
         # result = self.instance.get_user_details_by_username(username=conf_username,

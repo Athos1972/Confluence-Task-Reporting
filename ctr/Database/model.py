@@ -85,20 +85,24 @@ class Task(Base):
     __tablename__ = "tasks"
 
     internal_id = Column(Integer, primary_key=True, autoincrement=True)
-    global_id = Column(String(30), nullable=False)
+    global_id = Column(String(30), nullable=False)    # GlobalID from Confluence. This is a bit weird as it's not
+                                                      # supplied in tasks in pages but only in taskview-API.
     task_id = Column(Integer, nullable=False)         # TaskId on the current page
     reminder_date = Column(Date, nullable=True)       # The first date that can be found in a task
     second_date = Column(Date, nullable=True)         # The second date that can be found in a task
     due_date = Column(Date, nullable=True)            # Calculated due_date
-    is_done = Column(Boolean, nullable=False)
+    is_done = Column(Boolean, nullable=False)         # Task incomplete or completed
     first_seen = Column(DateTime(), default=func.now())
     last_crawled = Column(DateTime(), onupdate=func.now(), nullable=True, index=True)
+    # The HTML Task Description from the WIKI-PAge
     task_description = Column(String(), nullable=True)
-    # age = column_property(func.now() - reminder_date) --> Doesn't work. Gives "1"
 
+    # Link to user_tasks, who is the owner of the task. Confluence considers only the first mentioned user_tasks as assignee.
+    # All other names are just as information
     user_id = Column(Integer, ForeignKey("conf_users.id"), nullable=True)
     user = relationship("User", backref="tasks")
 
+    # Link to the page, where this task can be found
     page_link = Column(Integer, ForeignKey("pages.internal_id"), nullable=False)
     page = relationship("Page", backref="tasks")
 
@@ -116,12 +120,14 @@ class Task(Base):
 
     @hybrid_property
     def age(self):
+        # This is processed during single record operations
         x = (datetimedate.today() - self.due_date)
         return x
 
     @age.expression
     def age(cls):
         # FIXME: Works only on SQLITE-DB
+        # This is processed during queries with more than one entry
         return func.julianday("now") - func.julianday(cls.due_date)
 
 
@@ -166,8 +172,8 @@ class Page(Base):
     __tablename__ = "pages"
 
     internal_id = Column(Integer, primary_key=True, autoincrement=True)
-    page_link = Column(String(100), nullable=False)
-    page_name = Column(String(200), nullable=False)
+    page_link = Column(String(100), nullable=False)        # Link to the page
+    page_name = Column(String(200), nullable=False)        # Name/Title of the page
     page_id = Column(Integer, nullable=True, unique=True)  # The unique Confluence PageID
     space = Column(String(50), nullable=True, index=True)  # True because Space is not known during initial creation.
     last_crawled = Column(DateTime, onupdate=func.now(), nullable=False, index=True)

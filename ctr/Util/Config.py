@@ -6,7 +6,7 @@ import argparse
 
 class Singleton(type):
     """
-    Singleton-Klasse.
+    Singleton-Class. Can have only exactly 1 instance.
     """
     _instances = {}
 
@@ -18,12 +18,13 @@ class Singleton(type):
 
 class Config(metaclass=Singleton):
     """
-    Globale Konfiguration aus toml-File lesen und zur Verfügung stellen. Singleton-Klasse - wird nur 1x instanziert
+    Read and provide global config settings from config.toml, environment and CLI-Parameters.
+    Singleton-Klasse - wird nur 1x instanziert
     """
     def __init__(self, filename="config.toml"):
         """
 
-        :param filename: Dateiname (inkl. Pfad - wenn notwendig) zur Konfigurationsdatei
+        :param filename: Filename (incl. full path) to the configuration file
         """
         print(f"CWD = {Path.cwd()}")
         self.filename = filename
@@ -43,14 +44,13 @@ class Config(metaclass=Singleton):
         args = parser.parse_args()
         self.config["OUWT"] = True if args.onlyUserWithTasks else False
 
-
     def get_config(self, config_key: str, optional=True, default_value=None):
         """
-        Gibt den/die Werte aus dem Config-File (TOML) zurück
+        Returns the value of a configuration parameter.
 
-        :param config_key: Schlüssel, der aus dem Config-File rauskomen soll
-        :param optional: Nicht dumpen, wenn der Parameter nicht gefunden wurde
-        :param default_value: Wert, der zurückgegeben werden soll wenn nichts gefunden wurde
+        :param config_key: Key from the configuration file
+        :param optional: If true we don't raise an error when the key is no there
+        :param default_value: default value if no value was found in the configuration file
         :return:
         """
         if optional:

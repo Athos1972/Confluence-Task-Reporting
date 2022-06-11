@@ -58,7 +58,7 @@ def select_options(selected_company, selected_space, checked_overdue):
 def send_reminder(reminder_btn):
     changed_id = [p['prop_id'] for p in callback_context.triggered][0]
 
-    # reminder_btn = 1, as not to spam. If the user chooses a space or a company, this counter is reset and therefore
+    # reminder_btn = 1, as not to spam. If the user_tasks chooses a space or a company, this counter is reset and therefore
     # can send another reminder to specific space or company through active_space, active_company
     if 'btn_send_reminder' in changed_id and reminder_btn == 1:
         print("Sent Reminder!")
@@ -66,13 +66,13 @@ def send_reminder(reminder_btn):
     return ""
 
 
-@app.callback(
-    Output('datatable-row-ids-container', 'children'),
-    Input('datatable-row-ids', 'derived_virtual_row_ids'),
-    Input('datatable-row-ids', 'selected_row_ids'),
-    Input('datatable-row-ids', 'active_cell'))
-def update_graphs(row_ids, selected_row_ids, active_cell):
-    return
+# @app.callback(
+#     Output('datatable-row-ids-container', 'children'),
+#     Input('datatable-row-ids', 'derived_virtual_row_ids'),
+#     Input('datatable-row-ids', 'selected_row_ids'),
+#     Input('datatable-row-ids', 'active_cell'))
+# def update_graphs(row_ids, selected_row_ids, active_cell):
+#     return
     # # JUST AN EXAMPLE IMPLEMENTATION - NEEDS TO BE ADJUSTED TO Confluence-Task-Reporting!
     # # SOURCE: https://dash.plotly.com/datatable/interactivity
     #
@@ -124,7 +124,7 @@ def update_graphs(row_ids, selected_row_ids, active_cell):
     #             },
     #         },
     #     )
-    #     # check if column exists - user may have deleted it
+    #     # check if column exists - user_tasks may have deleted it
     #     # If `column.deletable=False`, then you don't
     #     # need to do this check.
     #     for column in ['pop', 'lifeExp', 'gdpPercap'] if column in dff

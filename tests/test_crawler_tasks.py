@@ -16,7 +16,7 @@ session = db_connection.get_session()
 
 def test_tasks_for_single_user():
     """
-    Tests wheter for a specific user we receive 10 Tasks as a result when we request 10 tasks
+    Tests wheter for a specific user_tasks we receive 10 Tasks as a result when we request 10 tasks
     :return:
     """
     result = test_instance.crawl_tasks_for_user("NBUBEV", limit=2, max_entries=4)

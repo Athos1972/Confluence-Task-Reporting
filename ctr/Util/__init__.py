@@ -1,3 +1,6 @@
+"""
+Provides the logger and global_config-Variables to all classes, programs, etc.
+"""
 import logging
 from pathlib import Path
 from datetime import datetime
@@ -37,6 +40,11 @@ logger.addHandler(fileHandler)
 
 
 def timeit(f):
+    """
+    timeit-decorator
+    :param f:
+    :return:
+    """
 
     def timed(*args, **kw):
 

@@ -6,6 +6,9 @@ from pathlib import Path
 
 
 class SqlConnector:
+    """
+    Provides the Connection to the database and offers get_session to execute sqlite operations with
+    """
     def __init__(self, file=None, *args, **kwargs):
         self.engine = None
         if not file:

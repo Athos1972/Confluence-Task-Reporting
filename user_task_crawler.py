@@ -25,7 +25,7 @@ if __name__ == '__main__':
             group_by(User.conf_name)
     else:
         q = session.query(User).order_by(User.tasks_last_crawled).limit(max_entries_users)
-    # q = session.query(User).filter(User.conf_name == "NBUBEV")
+    q = session.query(User).filter(User.conf_name == "NBUBEV")
     logger.info(f"Executing Task Crawling for {len(list(q))} User-Records")
     for user in q:
         # First let's set all tasks to Completed. Like this we'll "uncomplete" still existing tasks without

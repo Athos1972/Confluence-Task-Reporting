@@ -30,19 +30,19 @@ if __name__ == '__main__':
                 reminder_date = None
             task_id = int(str(single_task.find("ac:task-id").text))
 
-            # Find confluence-Key of the first mentioned user.
+            # Find confluence-Key of the first mentioned user_tasks.
             if "ri:userkey" not in str(single_task):
-                logger.info(f"There is no mentioned user in this task-id {task_id} on page {found_record.page_id}. "
+                logger.info(f"There is no mentioned user_tasks in this task-id {task_id} on page {found_record.page_id}. "
                             f"Ignoring Task: {str(single_task)}")
                 continue
 
-            user_conf_key = single_task.find("ri:user").attrs["ri:userkey"]
+            user_conf_key = single_task.find("ri:user_tasks").attrs["ri:userkey"]
             user = subquerysession.query(User).where(User.conf_userkey==user_conf_key).first()
             if not user:
                 logger.critical(f"In page {found_record.page_id} is task_id {task_id} with userkey "
-                                f"{user_conf_key}. But can't seem to find this user in the database. When did you last"
+                                f"{user_conf_key}. But can't seem to find this user_tasks in the database. When did you last"
                                 f"recrawl users --> python user_crawler.py. "
-                                f"Could also be a non-existing user (deleted).")
+                                f"Could also be a non-existing user_tasks (deleted).")
                 continue
 
             # If the task (consisting of PageID and task-id) already existed let's pass the global_id. If it doesnt'

@@ -1,3 +1,7 @@
+"""
+Gets all users from conflunce installation and stores them in the database. E-Mail, which can't be received from the API
+is read from user_tasks profile page if user_tasks was not there already.
+"""
 from ctr.Util.Util import Util
 from ctr.Util import logger
 from ctr.Crawler.crawl_confluence import CrawlConfluence
@@ -10,16 +14,16 @@ if __name__ == '__main__':
     session = db_connection.get_session()
     Util.load_env_file()
     crawler = CrawlConfluence()
-    start = 600
-    max_entries = 45
+    start = 0
+    max_entries = 2000
     conf_users = crawler.crawl_users(limit=50, max_entries=max_entries, start=start)
     for conf_user in conf_users:
         q = session.query(User).filter(User.conf_name==conf_user.get('username'), User.email).first()
         if not q or not q[0].email:
             # Attributes like E-Mail-Address are not expandable/received in the member-API-Call, so we must call
-            # again (this time for each user) to receive those details.
+            # again (this time for each user_tasks) to receive those details.
             # As this data tends to be static don't do this during each crawl.
-            logger.debug(f"Getting further details for user {conf_user['username']}")
+            logger.debug(f"Getting further details for user_tasks {conf_user['username']}")
             conf_details = crawler.read_userdetails_for_user(conf_user["username"])
             for k, v in conf_details.items():
                 conf_user[k] = v

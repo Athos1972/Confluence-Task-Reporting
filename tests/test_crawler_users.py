@@ -49,7 +49,7 @@ def test_user_wrapper_exists():
 
 def test_user_wrapper_new_user():
     """
-    Create a new user and search for it in the database
+    Create a new user_tasks and search for it in the database
     :return:
     """
     rand_user_name = ''.join(choices(string.ascii_letters, k=6))

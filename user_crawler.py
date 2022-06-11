@@ -10,8 +10,8 @@ if __name__ == '__main__':
     session = db_connection.get_session()
     Util.load_env_file()
     crawler = CrawlConfluence()
-    start = 0
-    max_entries = 600
+    start = 600
+    max_entries = 1500
     conf_users = crawler.crawl_users(limit=50, max_entries=max_entries, start=start)
     for conf_user in conf_users:
         q = session.query(User).filter(User.conf_name==conf_user.get('username'), User.email).first()

@@ -139,12 +139,10 @@ class DashCards:
         return fig
 
     def get_datatable_element(self, format_of_output="datatable"):
+        l_grid_data = self.dash_values.get_grid_data(format_of_output=format_of_output)
         table = dash_table.DataTable(id="grid-table-inner",
-                                     columns=[
-                                         {"name": i, "id": i, "presentation": "markdown"}
-                                         for i in self.dash_values.get_grid_data(format_of_output=format_of_output)],
-                                     data=self.dash_values.get_grid_data(format_of_output="datatable").to_dict(
-                                         "records"),
+                                     columns=[{"name": i, "id": i, "presentation": "markdown"} for i in l_grid_data],
+                                     data=l_grid_data.to_dict("records"),
                                      page_size=DashCards.PAGE_SIZE,
                                      sort_action="native",
                                      sort_mode="multi",

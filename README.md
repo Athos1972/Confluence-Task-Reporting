@@ -92,11 +92,15 @@ task_report_\<date>.xlsx</code> in  the folder.
 * Currently no distribution of results
 
 # Future enhancements/developments
-Also - if you have a good idea for a future feature: please send to buhl @ buhl-consulting.com.cy and let's see what we
-can do about it.
+If there's a feature missing for your to make Confluence-Task-Reporter more useful: Create an issue right here on 
+GitHub. Thank you!
+
 ## Near future
-* Export of dashboard grid to XLS
+* Age-distribution of tasks (as graph) depending on selections of the dashboard (in development)
 * Select not only company and space in Dashboard but also User(s)
+* Export of task list also to google sheets and CSV. Any takers?
+* Export of chose tasks from the dashboard (basically exporting the filtered contents of the data grid)
+* Export graph elements and grid as Confluence-Page (either update fixed page-id or create new page on each run)
 
 ## Future
 * Update task contents from the app (click on a task, add a comment)

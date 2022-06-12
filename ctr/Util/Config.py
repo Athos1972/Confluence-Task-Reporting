@@ -1,7 +1,7 @@
 import toml
 import sys
 from pathlib import Path
-import argparse
+from argparse import ArgumentParser
 
 
 class Singleton(type):
@@ -46,10 +46,18 @@ class Config(metaclass=Singleton):
         Appends CLI Arguments to Config
         :return: Nothing
         """
-        parser = argparse.ArgumentParser()
-        parser.add_argument('-OUWT', '--onlyUserWithTasks')
-        parser.add_argument('-c', '--configFile')
-        parser.add_argument('-OO', '--onlyOverdue')
+        parser = ArgumentParser(description="Call CTR modules", exit_on_error=False)
+        parser.exit_on_error = False
+        parser.add_argument('-OUWT', '--onlyUserWithTasks',
+                            help="Run user_crawler.py only for Users who had already tasks")
+        parser.add_argument('-c', '--configFile', help="Specify the *.toml-File to use for execution")
+        parser.add_argument('-OO', '--onlyOverdue', help="Only export overdue tasks")
+        parser.add_argument('-COVERAGE', "--cov")
+        parser.add_argument('--cov-report', action='store_true')
+        parser.add_argument("strings", type=str, metavar="OUTPUT", nargs="?", help="Output of pytest-cov", default="")
+        parser.add_argument('-COVCONFIG', "--cov-config")
+        parser.add_argument('-d', "--durations")
+        parser.add_argument("-tests", "--tests")
         # parser.add_argument('-v', dest='verbose', action='store_true')
         args = parser.parse_args()
         self.config["OUWT"] = True if args.onlyUserWithTasks else False

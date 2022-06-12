@@ -1,7 +1,4 @@
-sqlalchemy
-atlassian-python-api
-BeautifulSoup4~=4.11.1
-python-dotenv~=0.20.0
-toml~=0.10.2
 faker
 pytest
+setuptools
+pytest-cov

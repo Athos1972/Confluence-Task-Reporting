@@ -14,8 +14,6 @@ import functools
 def catch_sql_error(func):
     """
     Decorator for DB-Functions to catch DB-Errors
-    :param args:
-    :param kwargs:
     :return:
     """
 
@@ -32,7 +30,7 @@ def catch_sql_error(func):
 
 
 class UserReporting:
-    def __init__(self, db_connection=SqlConnector):
+    def __init__(self, db_connection: SqlConnector):
         self.db_connection = db_connection
         self.session = self.db_connection.get_session()
 
@@ -111,7 +109,7 @@ class TaskReporting:
         logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
         return q
 
-    def task_count_by_company(self, filter_companies=[], filter_overdue=False):
+    def task_count_by_company(self, filter_companies=None, filter_overdue=False):
         session = self.db_connection.get_session()
         if not filter_overdue:
             date_to_filter = datetime.strptime("2199-12-31", "%Y-%m-%d")
@@ -228,17 +226,18 @@ class TaskReporting:
     def get_tasks_view(self):
         session = self.db_connection.get_session()
         q = session.query(Task.internal_id, Task.task_description, Task.reminder_date,
-                          Task.second_date,
+                          Task.second_date, Task.due_date,
                           User.display_name, Page.space, Page.page_name, Page.page_link, User.company). \
             join(User, Page).where(Page.internal_id == Task.page_link, User.id == Task.user_id, Task.is_done == False)
 
         logger.debug(f"returned {len(list(q))} entries. Statement was: {str(q)}")
 
-        df = pd.DataFrame(columns=["task_internal_id", "Description", "Reminder", "Due",
+        df = pd.DataFrame(columns=["task_internal_id", "Description", "Reminder", "Second", "Due",
                                    "Name", "Space", "page_name", "Page", "Company"],
                           data=list(q))
         # Convert from datetime-Format to date format
         df["Due"] = pd.to_datetime(df['Due']).dt.date
+        df["Second"] = pd.to_datetime(df['Second']).dt.date
         df["Reminder"] = pd.to_datetime(df["Reminder"]).dt.date
 
         # Convert task description into readable format:

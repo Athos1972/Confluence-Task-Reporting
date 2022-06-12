@@ -6,3 +6,4 @@ toml~=0.10.2
 dash
 pandas
 dash-bootstrap-components
+xlsxwriter

@@ -80,7 +80,7 @@ class DashValues:
                 logger.critical(f"Format of output-table unknown: {format_of_output}. Page-names will be empty.")
             # Build task selector cell/column
 
-        grid_data = grid_data.drop(['Page', 'task_internal_id', 'page_name'], axis=1)
+        grid_data = grid_data.drop(['Page', 'task_internal_id', 'page_name', "Second", "Reminder"], axis=1)
 
         grid_data["Page"] = page_hyperlinks
 

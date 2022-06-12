@@ -52,7 +52,7 @@ Another option to consume the results is via a nice little dashboard.
 
 ## Install
 * Hopefully you're comfortable with using the console or command prompt. Otherwise you won't make it. Sorry.
-* Get the repository <code>git clone https://github.com/Athos1972/Confluence-Task-Reporting</code>  
+* Get the repository <code>git clone https:\//github.com/Athos1972/Confluence-Task-Reporting</code>  
 * Create a file named exactly <code>.env</code> in the root of the downloaded repository.
 * Enter <code>CONF_USER=<your_user_name></code>, <CONF_PWD=<your_password_for_confluence> into the file
 * Enter <code>CONF_BASE_URL="https://<path_to_your_confluence_instance>"</code> into the <code>.env</code> file
@@ -83,7 +83,10 @@ due-date of the tasks as well as the space name.
 analyses those tasks again.
 
 ## Reports
-* Currently no reports except the dashboard
+* To receive an Excel-Sheet of all tasks simply run <code>python tasks_to_excel.py</code> and you'll find a file <code>
+task_report_\<date>.xlsx</code> in  the folder. 
+  * **TIPP**: To export only overdue tasks: <code>python tasks_to_excel.py -OO=1</code> or 
+    <code>python tasks_to_excel.py --onlyOverdue=1</code>
 
 ## Distribution
 * Currently no distribution of results

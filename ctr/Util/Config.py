@@ -49,10 +49,12 @@ class Config(metaclass=Singleton):
         parser = argparse.ArgumentParser()
         parser.add_argument('-OUWT', '--onlyUserWithTasks')
         parser.add_argument('-c', '--configFile')
+        parser.add_argument('-OO', '--onlyOverdue')
         # parser.add_argument('-v', dest='verbose', action='store_true')
         args = parser.parse_args()
         self.config["OUWT"] = True if args.onlyUserWithTasks else False
         self.config["CONFIG_FILE"] = args.configFile or "config.toml"
+        self.config["ONLY_OVERDUE"] = args.onlyOverdue or False
 
     def get_config(self, config_key: str, optional=True, default_value=None):
         """

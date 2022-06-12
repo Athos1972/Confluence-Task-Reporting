@@ -1,5 +1,4 @@
-from sqlalchemy import select
-
+from bs4 import BeautifulSoup
 from ctr.Util import logger
 from ctr.Database.connection import SqlConnector
 from ctr.Database.model import Task, User, Page
@@ -7,6 +6,7 @@ from sqlalchemy.sql import func
 from sqlalchemy import distinct
 from sqlite3 import ProgrammingError
 from datetime import datetime
+from dateutil import parser
 import pandas as pd
 import functools
 
@@ -18,6 +18,7 @@ def catch_sql_error(func):
     :param kwargs:
     :return:
     """
+
     @functools.wraps(func)
     def _retry(self, *args, **kwargs):
         try:
@@ -165,8 +166,66 @@ class TaskReporting:
         data = {"age": ages, "page_space": spaces}
         return pd.DataFrame(data)
 
+    @staticmethod
+    def get_task_as_string(task_string: str) -> str:
+        """
+        Will parse a confluence task's HTML String into a readable/printable Python string.
+        :param task_string: Confluence-Task as HTML:
+        <ul class="inline-task-list" data-inline-tasks-content-id="77110850">
+            <li data-inline-task-id="54">
+                <span class="placeholder-inline-tasks">
+                    <a class="confluence-userlink user-mention current-user-mention"
+                        data-username="zzz"
+                        href="/confluencezzz/display/~zzz"
+                        data-linked-resource-id="xyz"
+                        data-linked-resource-version="3"
+                        data-linked-resource-type="userinfo"
+                        data-base-url="https://zzz/confluence-zzz">name_of_user</a>
+                do something - here is the task description
+                <time datetime="2022-05-31" class="date-upcoming">31 May 2022</time>       # This is the reminder date!
+                <time datetime="2025-12-31" class="date-future">31 Dec 2025</time>  
+                <br/>BB/18.11.21: Done
+                <br/>BB/30.11.21: Done
+                </span>
+                <span class="placeholder-inline-tasks">
+                </span>
+            </li>
+        </ul>
+
+        :return: readable, printable Python String.
+        """
+        bs = BeautifulSoup(task_string, features="html.parser")
+
+        # Replace TIME-Tag with string of date.
+        for x in bs.findAll("time"):
+            x.replaceWith(str(parser.parse(x.attrs.get("datetime")).date()) + " ")
+
+        for x in bs.findAll("ul"):
+            x.unwrap()
+        for x in bs.findAll("li"):
+            x.unwrap()
+        for x in bs.findAll("span", attrs={"class": "placeholder-inline-tasks"}):
+            x.unwrap()
+        for x in bs.findAll("a", attrs={"class": "confluence-userlink"}):
+            name = x.text
+            x.replaceWith(name)
+
+        result = str(bs)
+
+        replace_table = [
+            ["\n", ""],
+            ["<br/>", "\r\n"],
+            ["&gt;", ">"],
+            ["&lt;", "<"]
+        ]
+
+        for entry in replace_table:
+            result = result.replace(entry[0], entry[1])
+
+        return result
+
     @catch_sql_error
-    def get_task_view(self):
+    def get_tasks_view(self):
         session = self.db_connection.get_session()
         q = session.query(Task.internal_id, Task.task_description, Task.reminder_date,
                           Task.second_date,
@@ -181,5 +240,8 @@ class TaskReporting:
         # Convert from datetime-Format to date format
         df["Due"] = pd.to_datetime(df['Due']).dt.date
         df["Reminder"] = pd.to_datetime(df["Reminder"]).dt.date
+
+        # Convert task description into readable format:
+        df["Description"] = df["Description"].apply(self.get_task_as_string)
 
         return df

@@ -45,7 +45,7 @@ class DashValues:
         return x
 
     def get_task_view(self):
-        return self.reporter.get_task_view()
+        return self.reporter.get_tasks_view()
 
     def get_grid_data(self, format_of_output="table"):
         """

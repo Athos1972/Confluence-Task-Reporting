@@ -49,7 +49,8 @@ class DashCards:
         )
         return card
 
-    def get_company_overdue_task_card(self, overdue_value=None):
+    @staticmethod
+    def get_company_overdue_task_card(overdue_value=None):
         if not any(overdue_value):
             output_overdue_value = 0
         else:
@@ -68,7 +69,8 @@ class DashCards:
         )
         return card
 
-    def get_task_average_time_card(self, tasks_by_age_data=None):
+    @staticmethod
+    def get_task_average_time_card(tasks_by_age_data=None):
         if not any(tasks_by_age_data):
             tasks_by_age_data = {"age": 0}
         card = dbc.Card(
@@ -86,14 +88,14 @@ class DashCards:
         )
         return card
 
-    def get_space_selector(self, type="Select"):
-        if type == "Dropdown":
+    def get_space_selector(self, call_type="Select"):
+        if call_type == "Dropdown":
             # FIXME: Works but looks terrible. The DIV should look nicer. Also no callback implemented yet.
             selector = html.Div([
                 "Select space(s)",
-            dcc.Dropdown(self.dash_constants.get_spaces()[1:], id="space_selector", multi=True),])
+                dcc.Dropdown(self.dash_constants.get_spaces()[1:], id="space_selector", multi=True), ])
             return selector
-        elif type == "Select":
+        elif call_type == "Select":
             selector = dbc.InputGroup(
                 [dbc.InputGroupText("Space"),
                  dbc.Select(id="selectSpace",
@@ -113,7 +115,8 @@ class DashCards:
 
         return selector
 
-    def get_overdue_checkbox(self):
+    @staticmethod
+    def get_overdue_checkbox():
         element = dbc.InputGroup(
             [dbc.Checkbox(id="checkOverdue", value=False, label="Only Overdue")],
             className="mt-2")
@@ -146,14 +149,14 @@ class DashCards:
                                      sort_action="native",
                                      sort_mode="multi",
                                      row_selectable="multi",
-                                     # fill_width=False,
+                                     # not a good idea: fill_width=False,
                                      style_header=
-                                     { # 'fontWeight': 'bold',
-                                      'fontFamily': 'Arial',
-                                      'border': 'thin lightgrey solid',
-                                      'backgroundColor': 'rgb(100, 100, 100)',
-                                      'color': 'white'
-                                      },
+                                     {  # 'fontWeight': 'bold',
+                                         'fontFamily': 'Arial',
+                                         'border': 'thin lightgrey solid',
+                                         'backgroundColor': 'rgb(100, 100, 100)',
+                                         'color': 'white'
+                                     },
                                      # style_cell={
                                      #     'fontFamily': 'Open Sans',
                                      #     'textAlign': 'left',

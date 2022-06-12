@@ -66,7 +66,7 @@ class Config(metaclass=Singleton):
         if optional:
             return self.config.get(config_key, default_value)
 
-        if not config_key in self.config.keys():
+        if config_key not in self.config.keys():
             raise ValueError(f"Key {config_key} not found in Config. Parameter not optional.")
 
         return self.config[config_key]

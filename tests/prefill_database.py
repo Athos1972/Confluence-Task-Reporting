@@ -1,16 +1,13 @@
-from ctr.Util.Util import Util
-from ctr.Util import global_config
+
 from ctr.Database.connection import SqlConnector
-from ctr.Database.model import CreateTableStructures
 from ctr.Database.model import User, Task, Page
-from datetime import datetime, date
-from random import choices
+from datetime import date
 from faker import Faker
 import string
 from random import choices, randint
 from pathlib import Path
-from ctr.Crawler.crawl_confluence import TaskWrapper
-import datetime
+from sqlalchemy.exc import IntegrityError
+
 
 # Empties testdatabase, creates 1500 random users, 1500 Confluence-Pages and 3000 Tasks for those users on those
 # pages
@@ -56,7 +53,10 @@ for i in range(1501):
     page.space = space_list[randint(0, len(space_list)-1)]
     page.page_id = randint(9000000, 11000000)
     session.add(page)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
 
 
 print("Creating tasks")

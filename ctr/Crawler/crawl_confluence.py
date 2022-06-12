@@ -1,4 +1,5 @@
 from atlassian import Confluence
+from atlassian.errors import ApiError
 from ctr.Util import global_config, logger, timeit
 from os import environ
 from datetime import datetime, date
@@ -275,8 +276,11 @@ class TaskWrapper(Wrapper):
             # check in other installations: This call looks to take at least twice as long as the call via requests
             # (in the else-Clause) even though we say "expand=None".
             page.page_id = page.page_link[page.page_link.find("=") + 1:]
-            page_details = self.confluence_instance.get_page_by_id(page_id=page.page_id, expand=None)
-            page.space = page_details["space"].get("key")
+            try:
+                page_details = self.confluence_instance.get_page_by_id(page_id=page.page_id, expand=None)
+                page.space = page_details["space"].get("key")
+            except ApiError:
+                pass
         else:
             # Here we should add a header-directive to session-object to only transmit the first 10000 characters
             self._get_confluence_crawler_instance()

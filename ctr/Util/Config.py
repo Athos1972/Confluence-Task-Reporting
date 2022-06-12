@@ -21,11 +21,19 @@ class Config(metaclass=Singleton):
     Read and provide global config settings from config.toml, environment and CLI-Parameters.
     Singleton-Klasse - wird nur 1x instanziert
     """
-    def __init__(self, filename="config.toml"):
+    def __init__(self, filename=None):
         """
+        We get Config-filename from CLI-Arguments. If not we fallback to config.toml
+
+        After reading config we re-read CLI-Arguments to make sure they always override settings in the TOML-File.
 
         :param filename: Filename (incl. full path) to the configuration file
         """
+        self.config = {}
+        if not filename:
+            self.__get_cli_args()
+            filename = self.config["CONFIG_FILE"]
+
         print(f"CWD = {Path.cwd()}")
         self.filename = filename
         self.config = toml.load(filename)
@@ -40,9 +48,11 @@ class Config(metaclass=Singleton):
         """
         parser = argparse.ArgumentParser()
         parser.add_argument('-OUWT', '--onlyUserWithTasks')
+        parser.add_argument('-c', '--configFile')
         # parser.add_argument('-v', dest='verbose', action='store_true')
         args = parser.parse_args()
         self.config["OUWT"] = True if args.onlyUserWithTasks else False
+        self.config["CONFIG_FILE"] = args.configFile or "config.toml"
 
     def get_config(self, config_key: str, optional=True, default_value=None):
         """

@@ -96,7 +96,7 @@ class DashValues:
             grid_data = grid_data[grid_data["Company"].isin(self.filter_companies)]
 
         if self.filter_overdue:
-            grid_data = grid_data[grid_data["Reminder"] < date.today()]
+            grid_data = grid_data[grid_data["Due"] < date.today()]
 
         self.max_pages = len(grid_data) // 25
 

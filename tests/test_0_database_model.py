@@ -40,7 +40,7 @@ def test_create_initial_user():
 
 def test_database_model_page_initial_creation():
     lNew = Page(page_link="123", page_name="123")
-    lNew.page_id = 1234123
+    lNew.page_id = int("".join(choices(string.digits, k=15)))
     lNew.space = "franzi"
     l_session = db_connection.get_session()
     l_session.add(lNew)

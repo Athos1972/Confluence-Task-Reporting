@@ -74,9 +74,9 @@ def test_task_wrapper_multiple(tasks_to_create=10):
 <time datetime="2022-06-10"></time><time datetime="2022-05-05"></time></span></ac:task-body>
 </ac:task></ul>"""
 
-    for x in range(tasks_to_create):
+    for _ in range(tasks_to_create):
         wrapper = TaskWrapper(username="", global_id=randint(1,1000000),
-                              page_link="".join(choices(string.ascii_lowercase,k=15)),
+                              page_link="viewpage.action?pageId=" + "".join(choices(string.digits, k=15)),
                               page_name="franziska 4712",
                               task_id=123,
                               task_description=test_text,

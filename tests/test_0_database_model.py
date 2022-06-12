@@ -104,24 +104,6 @@ def test_task_due_date_is_reminder_date():
     assert lNew.due_date == lNew.second_date
 
 
-def test_task_has_second_date_attribute():
-    session = db_connection.get_session()
-    x = session.query(Task).filter(Task.global_id==123, Task.second_date).first()
-    assert x.has_second_date == True
-
-
-def test_task_has_second_date_attribute_false():
-    session = db_connection.get_session()
-    task = Task(global_id=124)
-    task.is_done = False
-    task.page_link = "4711"
-    task.task_id = 123
-    session.add(task)
-    session.commit()
-    x = session.query(Task).filter(Task.global_id == 124)
-    assert x[0].has_second_date == False
-
-
 def test_task_age():
     session = db_connection.get_session()
     task = Task(global_id=12345)

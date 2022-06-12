@@ -6,12 +6,12 @@ from sqlalchemy import DateTime
 from sqlalchemy import Date
 from sqlalchemy import Boolean
 from sqlalchemy import func, event
-# from sqlalchemy.orm import validates
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
 from datetime import datetime, date as datetimedate
 from ctr.Util import logger
+
 
 Base = declarative_base()
 
@@ -61,10 +61,11 @@ class User(Base):
     def __init__(self, conf_name, conf_userkey, email, display_name, last_crawled=None):
         self.conf_name = conf_name
         self.conf_userkey = conf_userkey
+        # Needs to be before email so that it will be overwritten with proper value
+        self.company = "unknown"
         self.email = email
         self.display_name = display_name
         self.last_crawled = last_crawled
-        self.company = "unknown"
 
 
 @event.listens_for(User.email, "set")
@@ -113,12 +114,6 @@ class Task(Base):
         return f"Int.ID={self.internal_id!r}, global_id={self.global_id!r}"
 
     @hybrid_property
-    def has_second_date(self):
-        if self.second_date:
-            return True
-        return False
-
-    @hybrid_property
     def age(self):
         # This is processed during single record operations
         x = (datetimedate.today() - self.due_date)
@@ -141,9 +136,16 @@ def update_due_date_from_second_date(target:Task, value, oldvalue, initiator):
     :param initiator:
     :return:
     """
+    if not target.reminder_date and value:
+        target.due_date = value
+        return target
     if value:
-        if value < target.reminder_date:
-            target.due_date = value
+        try:
+            if value < target.reminder_date:
+                target.due_date = value
+                return target
+        except TypeError:
+            logger.critical(f"Received {value}. Target.reminder_date was {target.reminder_date}. Didn't do anything.")
             return target
     return target
 

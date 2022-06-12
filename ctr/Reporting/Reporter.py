@@ -69,7 +69,7 @@ class TaskReporting:
         self.db_connection = db_connection
 
     @catch_sql_error
-    def task_count_by_space(self, filter_spaces, filter_overdue):
+    def task_count_by_space(self, filter_spaces=[], filter_overdue=False):
         session = self.db_connection.get_session()
         if not filter_overdue:
             date_to_filter = datetime.strptime("2199-12-31", "%Y-%m-%d")
@@ -110,7 +110,7 @@ class TaskReporting:
         logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
         return q
 
-    def task_count_by_company(self, filter_companies, filter_overdue):
+    def task_count_by_company(self, filter_companies=[], filter_overdue=False):
         session = self.db_connection.get_session()
         if not filter_overdue:
             date_to_filter = datetime.strptime("2199-12-31", "%Y-%m-%d")
@@ -139,7 +139,7 @@ class TaskReporting:
         return pd.DataFrame(columns=["company"], data=list(q))
 
     @catch_sql_error
-    def tasks_by_age_and_space(self, filter_overdue):
+    def tasks_by_age_and_space(self, filter_overdue=False):
         if not filter_overdue:
             stmt = """select age, page_space from 
                     (SELECT round(julianday(CURRENT_TIMESTAMP) - julianday(tasks.reminder_date),0) AS age, 

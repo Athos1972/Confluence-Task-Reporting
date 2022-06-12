@@ -110,6 +110,13 @@ class TaskWrapper(Wrapper):
         if not new_task:
             new_task = self.__create_new_task(subquery_session)
 
+        if not new_task:
+            logger.critical(f"Something went wrong. Check log before. Can't work with this record: "
+                            f"{self.task_description}")
+            subquery_session.rollback()
+            self.session.rollback()
+            return
+
         # Update task fields, which are provided in __init__
         new_task = self.__update_all_fields_in_task(new_task)
         # Update task fields derived from the task text
@@ -159,8 +166,9 @@ class TaskWrapper(Wrapper):
         logger.debug(f"New task with global_id = {self.global_id}.")
         new_task = Task(self.global_id)
         new_task = self._add_pagelink_from_task(new_task, subquery_session)
-        self.session.add(new_task)
-        return new_task
+        if new_task:
+            self.session.add(new_task)
+            return new_task
 
     def __update_all_fields_in_task(self, new_task):
         # These attributes may have changed since last crawl:
@@ -225,7 +233,9 @@ class TaskWrapper(Wrapper):
         # existing page in the database.
         tmp_soup = BeautifulSoup(self.task_description, features="html.parser")
         task = tmp_soup.findAll("ul")[0]
-        search_page_id = task.attrs['data-inline-tasks-content-id']
+        search_page_id = task.attrs.get('data-inline-tasks-content-id')
+        if not search_page_id:
+            logger.warning(f"Didn't find page_id in task {str(task)}.")
         new_task.page_link = subquery_session.query(Page).filter(Page.page_id == search_page_id).first()
         logger.debug(f"Found stored Page-Instance via content-id from task")
 
@@ -271,7 +281,7 @@ class TaskWrapper(Wrapper):
             # Here we should add a header-directive to session-object to only transmit the first 10000 characters
             self._get_confluence_crawler_instance()
             result = self.crawl_confluence.get_confluence_page_via_requests(page.page_link)
-            # Get the unique page-id from HTML:
+            # Get the unique page-id and the space-name from HTML-Result:
             page.page_id = self.__find_ajs_values_in_string("ajs-page-id", result.text)
             page.space = self.__find_ajs_values_in_string("ajs-space-key", result.text)
 

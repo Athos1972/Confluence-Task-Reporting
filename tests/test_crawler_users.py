@@ -40,8 +40,12 @@ def test_user_wrapper_exists():
     """
 
     time_before_execution = datetime.now()
-    q = session.query(User.conf_name).first()
-    wrapper = UserWrapper(confluence_name=q["conf_name"], db_connection=db_connection)
+    q = session.query(User).first()
+    wrapper = UserWrapper(confluence_name=q.conf_name,
+                          email=q.email,
+                          confluence_userkey=q.conf_userkey,
+                          display_name=q.display_name,
+                          db_connection=db_connection)
     wrapper.update_user_in_database()
     q = session.query(User.last_crawled).first()
     assert q[0] > time_before_execution

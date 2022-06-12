@@ -66,12 +66,21 @@ def test_task_wrapper_multiple(tasks_to_create=10):
     :param tasks_to_create: Number of random tasks to be created
     :return:
     """
-    for x in 0, tasks_to_create:
+
+    test_text = """<ul><ac:task>
+<ac:task-id>340</ac:task-id>
+<ac:task-status>incomplete</ac:task-status>
+<ac:task-body><span class="placeholder-inline-tasks"><ac:link><ri:user ri:userkey="123"></ri:user></ac:link>test 
+<time datetime="2022-06-10"></time><time datetime="2022-05-05"></time></span></ac:task-body>
+</ac:task></ul>"""
+
+    for x in range(tasks_to_create):
         wrapper = TaskWrapper(username="", global_id=randint(1,1000000),
                               page_link="".join(choices(string.ascii_lowercase,k=15)),
                               page_name="franziska 4712",
                               task_id=123,
-                              task_description="<html></html>",
+                              task_description=test_text,
+                              reminder_date="2022-05-10",
                               db_connection=db_connection)
         y = wrapper.update_task_in_database()
         assert y > 0

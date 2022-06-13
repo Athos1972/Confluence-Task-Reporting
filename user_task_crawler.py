@@ -24,19 +24,19 @@ def set_users_tasks_to_done():
     logger.info(f"Set {updated_records.rowcount} tasks of User {user.conf_name} to Done before we recrawl.")
 
 
-def get_tasks_of_user(user_tasks):
+def get_tasks_of_user(user):
     """
     Gets the tasks for this user from Confluence. Also sets tasks_last_crawled to current timestamp.
     :param user_tasks:
     :return:
     """
-    user_tasks = crawler.crawl_tasks_for_user(user_tasks.conf_name, limit=limit, max_entries=max_entries_tasks, start=0)
+    user_tasks = crawler.crawl_tasks_for_user(user.conf_name, limit=limit, max_entries=max_entries_tasks, start=0)
     try:
-        user_tasks.tasks_last_crawled = datetime.now()
+        user.tasks_last_crawled = datetime.now()
     except AttributeError:
         # We're in the Query-Mode. In this mode we don't have a locked User-Instance, so we update manually:
         subsession.execute(f"update conf_users set tasks_last_crawled = CURRENT_TIMESTAMP "
-                           f"where conf_users.id = {user_tasks.id}")
+                           f"where conf_users.id = {user.id}")
         subsession.commit()
     return user_tasks
 

@@ -120,4 +120,9 @@ automatically send reminder E-Mails
   * That's a bit tricky as most Atlassian Customers are Corporations and there will be all kinds of E-Mail-Systems 
   to deal with. Also we need an easy option to maintain a template text. 
   * Additional option: "Mailbomb"-Mode to send for each overdue task 1 E-Mail
+  
+# Changelog
+## 0.0.3:
+* Statistics table added. Also report to fill it.
+* Fixed bug in user_task_crawler in -OUWT-Mode. 
 

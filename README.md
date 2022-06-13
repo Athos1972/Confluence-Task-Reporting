@@ -77,6 +77,16 @@ due-date of the tasks as well as the space name.
 * Start the dashboard: <code>python dashboard.py</code>. Navigate to URL http://127.0.0.1:8050/ and see the results
 
 # Other stuff
+## Statistics writer
+If you want to be able to consume time series statistics, how open/overdue tasks per space, company and user evolve over
+time (e.g. because you set a new initiative to clear out overdue tasks and want to see whether it works or not) you can
+activate a statistics writer. You should run it e.g. daily or weekly or monthly (**Recommendation**: use your 
+computer's scheduler to do that. Don't rely on yourself not forgetting it.) 
+
+<code>python update_statistics.py</code>
+
+You should run that after you crawled all users and their tasks.
+
 ## Additional crawlers
 * <code>tasks_recrawl_by_page.py</code> recrawls tasks from previously crawled pages.
 * <code>task_recrawl_by_duedate.py</code> goes through all tasks in the database sorted by last crawl date and.
@@ -96,6 +106,7 @@ If there's a feature missing for your to make Confluence-Task-Reporter more usef
 GitHub. Thank you!
 
 ## Near future
+* Provide timeline data of open/overdue tasks per space, company, user, overall in dashboard and in Excel export
 * Age-distribution of tasks (as graph) depending on selections of the dashboard (in development)
 * Select not only company and space in Dashboard but also User(s)
 * Export of task list also to google sheets and CSV. Any takers?

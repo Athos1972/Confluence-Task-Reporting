@@ -189,6 +189,20 @@ class Page(Base):
         return f'Name: {self.page_name!r}, ID: {self.page_id}'
 
 
+class Statistics(Base):
+    __tablename__ = "stats"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    stat_date = Column(Date, nullable=False)
+    space = Column(String(50), nullable=False)
+
+    user_id = Column(Integer, ForeignKey("conf_users.id"), nullable=True)
+    user = relationship("User", backref="stats")
+
+    overdue = Column(Integer, nullable=True)
+    total = Column(Integer, nullable=False)
+
+
 class CreateTableStructures:
     """
     Create the Tables in the database, if not already there.

@@ -1,11 +1,11 @@
 from bs4 import BeautifulSoup
-from ctr.Util import logger
+from ctr.Util import logger, global_config
 from ctr.Database.connection import SqlConnector
 from ctr.Database.model import Task, User, Page
 from sqlalchemy.sql import func
 from sqlalchemy import distinct
 from sqlite3 import ProgrammingError
-from datetime import datetime
+from datetime import datetime, date
 from dateutil import parser
 import pandas as pd
 import functools
@@ -68,7 +68,7 @@ class TaskReporting:
         self.db_connection = db_connection
 
     @catch_sql_error
-    def task_count_by_space(self, filter_spaces=[], filter_overdue=False):
+    def task_count_by_space(self, filter_spaces=None, filter_overdue=False):
         session = self.db_connection.get_session()
         if not filter_overdue:
             date_to_filter = datetime.strptime("2199-12-31", "%Y-%m-%d")
@@ -244,3 +244,49 @@ class TaskReporting:
         df["Description"] = df["Description"].apply(self.get_task_as_string)
 
         return df
+
+    def save_daily_statistics(self, date_of_statistics: date = date.today(), overwrite=False):
+        """
+        Will store statistical records in the database. Overdue and all tasks for today (or date given)
+        per user and space.
+        :param date_of_statistics: Date in statistics-table to be set
+        :param overwrite: if there are values for this date already, shall we delete them first or add new ones?
+        :return: True if success. False otherwise.
+        """
+        session = self.db_connection.get_session()
+        if global_config.get_config("STATISTIC_DATE", optional=True):
+            sql_date_of_statistics = global_config.get_config("STATISTIC_DATE", optional=False)
+        else:
+            sql_date_of_statistics = date_of_statistics.strftime("%Y-%m-%d")
+        if overwrite:
+            sql_string = f"delete from stats where stat_date = '{sql_date_of_statistics}'"
+            x = session.execute(sql_string)
+            session.commit()
+            logger.info(f"{x.rowcount} stats records deleted for date {sql_date_of_statistics} from stats "
+                        f"table because 'overwrite' was set to True.")
+        sql_string = f"""
+        insert into stats (stat_date, space, user_id, overdue, total)
+            select "{sql_date_of_statistics}" as stat_date, x.space, x.user_id, y.overdue, x.total from (
+                   select space, tasks.user_id, count(tasks.internal_id) as total 
+                          from tasks join conf_users on tasks.user_id = conf_users.id 
+                                     join pages on tasks.page_link = pages.internal_id 
+                         group by conf_users.id, pages.space ) 
+            as x left outer join (
+                   select space, tasks.user_id, count(tasks.internal_id) as overdue 
+                          from tasks 
+                               join conf_users on tasks.user_id = conf_users.id 
+                               join pages on tasks.page_link = pages.internal_id 
+                         where tasks.due_date < CURRENT_DATE 
+                    group by conf_users.id, pages.space ) 
+            as y
+            on x.user_id = y.user_id and x.space = y.space"""
+
+        q = session.execute(sql_string)
+        try:
+            logger.info(f"{q.rowcount} statistics records written for date = {sql_date_of_statistics}.")
+            session.commit()
+            return True
+        except Exception as ex:
+            logger.warning(f"During stats-update received error {ex}")
+            session.rollback()
+            return False

@@ -52,6 +52,8 @@ class Config(metaclass=Singleton):
                             help="Run user_crawler.py only for Users who had already tasks")
         parser.add_argument('-c', '--configFile', help="Specify the *.toml-File to use for execution")
         parser.add_argument('-OO', '--onlyOverdue', help="Only export overdue tasks")
+        parser.add_argument('-SD', '--statisticDate', help="Provide the date that statistics should be written for."
+                                                           "Relevant parameter for update_statistics.")
         parser.add_argument('-COVERAGE', "--cov")
         parser.add_argument('--cov-report', action='store_true')
         parser.add_argument("strings", type=str, metavar="OUTPUT", nargs="?", help="Output of pytest-cov", default="")
@@ -63,6 +65,7 @@ class Config(metaclass=Singleton):
         self.config["OUWT"] = True if args.onlyUserWithTasks else False
         self.config["CONFIG_FILE"] = args.configFile or "config.toml"
         self.config["ONLY_OVERDUE"] = args.onlyOverdue or False
+        self.config["STATISTIC_DATE"] = args.statisticDate or None
 
     def get_config(self, config_key: str, optional=True, default_value=None):
         """

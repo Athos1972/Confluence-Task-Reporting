@@ -83,6 +83,10 @@ for i in range(3000):
     task.reminder_date = date(year=randint(2020, 2024), month=randint(1, 12), day=randint(1, 26))
     if i %3 == 0:
         task.second_date = date(year=randint(2020, 2024), month=randint(1, 12), day=randint(1, 26))
+    if i %6 == 0:
+        task.reminder_date = None
+        task.second_date = None
+        task.due_date = None
 
     session.add(task)
     session.commit()

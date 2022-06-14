@@ -75,35 +75,21 @@ class TaskReporting:
         else:
             date_to_filter = datetime.now()
         if not filter_spaces or len("".join(filter_spaces)) == 0:
-            if not filter_date:
                 q = session.query(func.count(Task.reminder_date), Page.space). \
                     join(Page). \
                     filter(Task.is_done == False,
                            Task.reminder_date < date_to_filter). \
                     group_by(Page.space)
-            else:
-                q = session.query(func.count(Task.reminder_date), Page.space). \
-                    join(Page). \
-                    filter(Task.is_done == False,
-                           Task.reminder_date < date_to_filter,
-                           Task.due_date.is_(None)). \
-                    group_by(Page.space)
         else:
-            if not filter_date:
                 q = session.query(func.count(Task.reminder_date), Page.space). \
                     join(Page). \
                     filter(Task.is_done == False,
                            Task.reminder_date < date_to_filter,
                            Page.space.in_(filter_spaces)). \
                     group_by(Page.space)
-            else:
-                q = session.query(func.count(Task.reminder_date), Page.space). \
-                    join(Page). \
-                    filter(Task.is_done == False,
-                           Task.reminder_date < date_to_filter,
-                           Page.space.in_(filter_spaces),
-                           Task.due_date.is_(None)). \
-                    group_by(Page.space)
+
+        if filter_date:
+            q = q.filter(Task.due_date.is_(None))
 
         logger.debug(f"returned {q.count()} entries. Statement was: {str(q)}")
         return pd.DataFrame(columns=['count', 'space'], data=list(q))
@@ -134,35 +120,21 @@ class TaskReporting:
             date_to_filter = datetime.now()
 
         if not filter_companies or len("".join(filter_companies)) == 0:
-            if not filter_date:
-                q = session.query(func.count(Task.internal_id), User.company). \
-                    join(Task). \
-                    filter(Task.is_done == False,
-                           Task.reminder_date < date_to_filter). \
-                    group_by(User.company)
-            else:
-                q = session.query(func.count(Task.internal_id), User.company). \
-                    join(Task). \
-                    filter(Task.is_done == False,
-                           Task.reminder_date < date_to_filter,
-                           Task.due_date.is_(None)). \
-                    group_by(User.company)
+            q = session.query(func.count(Task.internal_id), User.company). \
+                join(Task). \
+                filter(Task.is_done == False,
+                       Task.reminder_date < date_to_filter). \
+                group_by(User.company)
         else:
-            if not filter_date:
-                q = session.query(func.count(Task.internal_id), User.company). \
-                    join(Task). \
-                    filter(Task.is_done == False,
-                           User.company.in_(filter_companies),
-                           Task.reminder_date < date_to_filter). \
-                    group_by(User.company)
-            else:
-                q = session.query(func.count(Task.internal_id), User.company). \
-                    join(Task). \
-                    filter(Task.is_done == False,
-                           User.company.in_(filter_companies),
-                           Task.reminder_date < date_to_filter,
-                           Task.due_date.is_(None)). \
-                    group_by(User.company)
+            q = session.query(func.count(Task.internal_id), User.company). \
+                join(Task). \
+                filter(Task.is_done == False,
+                       User.company.in_(filter_companies),
+                       Task.reminder_date < date_to_filter). \
+                group_by(User.company)
+
+        if filter_date:
+            q = q.filter(Task.due_date.is_(None))
 
         logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
         return pd.DataFrame(columns=['count', 'company'], data=list(q))
@@ -214,7 +186,10 @@ class TaskReporting:
         result = list(q)
         print(len(result))
         logger.debug(f"returned {len(result)} entries. Statement was {stmt}")
-        return pd.DataFrame(columns=['age', 'count'], data=result)
+        dataframe = pd.DataFrame(columns=['age', 'count'], data=result)
+        dataframe["age"] = dataframe["age"].astype(str)
+        print(dataframe)
+        return dataframe
 
     @catch_sql_error
     def tasks_by_age_and_space(self, filter_overdue=False, filter_date=False):

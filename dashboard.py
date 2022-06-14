@@ -7,7 +7,7 @@ from ctr.Reporting.Dash import DashConstants, DashCards
 from ctr.Reporting.DashValues import DashValues
 
 
-# Loading datbase connection
+# Loading database connection
 db_connection = SqlConnector()
 dash_values = DashValues(db_connection=db_connection)
 dash_constants = DashConstants(db_connection=db_connection)

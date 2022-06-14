@@ -6,6 +6,7 @@ from ctr.Util import logger
 import dash_bootstrap_components as dbc
 from dash import html, dcc, dash_table
 import plotly.express as px
+import plotly.graph_objects as go
 
 
 class DashConstants:
@@ -96,8 +97,8 @@ class DashCards:
     def get_space_selector(self, call_type="Select"):
         if call_type == "Dropdown":
             selector = dbc.InputGroup(
-                [dbc.InputGroupText("Select space(s)"),
-                 dcc.Dropdown(self.dash_constants.get_spaces()[1:], id="selectSpace", multi=True, style={'flex-grow' : '1'})],
+                [dbc.InputGroupText("Select space(s)", className="w-100"),
+                 dcc.Dropdown(self.dash_constants.get_spaces()[1:], id="selectSpace", multi=True, style={"flex-grow" : "1"})],
                 className="mb-3 d-flex w-100")
             return selector
         elif call_type == "Select":
@@ -112,7 +113,7 @@ class DashCards:
     def get_company_selector(self, call_type="Select"):
         if call_type == "Dropdown":
             selector = dbc.InputGroup(
-                [dbc.InputGroupText("Select company(ies)"),
+                [dbc.InputGroupText("Select company(ies)", className="w-100"),
                  dcc.Dropdown(self.dash_constants.get_companies()[1:], id="selectCompany", multi=True,
                               style={'flex-grow': '1'})],
                 className="mb-3 d-flex w-100")
@@ -137,7 +138,7 @@ class DashCards:
     @staticmethod
     def get_date_checkbox():
         element = dbc.InputGroup(
-            [dbc.Checkbox(id="checkDate", value=False, label="Tasks without date Only")],
+            [dbc.Checkbox(id="checkDate", value=False, label="Tasks without date")],
             className="mt-2")
         return element
 
@@ -159,23 +160,30 @@ class DashCards:
                      x='company',
                      y='count',
                      labels={
-                         "count" : "Count",
-                         "company" : "Company"
+                         "count": "Count",
+                         "company": "Company"
                      },
                      color='company',
                      hover_data=['company'])
         return fig
 
     def get_task_count_by_age_fig(self):
-        fig = px.bar(data_frame=self.dash_values.get_task_count_by_age(),
-                     x='age',
-                     y='count',
-                     labels={
-                         "count": "Count",
-                         "age": "Age"
-                     },
-                     color='age',
-                     hover_data=['age'])
+        df = self.dash_values.get_task_count_by_age()
+        fig = go.Figure()
+
+        # TODO: add figure legend
+        fig.add_trace(
+            go.Scatter(
+                x=df["age"],
+                y=df["count"]
+            ))
+
+        fig.add_trace(
+            go.Bar(
+                x=df["age"],
+                y=df["count"]
+            ))
+
         return fig
 
     def get_datatable_element(self, format_of_output="datatable"):
@@ -264,8 +272,8 @@ class DashCards:
                         width=6),
                 dbc.Col([dcc.Graph(figure=self.get_open_tasks_per_space_fig())], width=6),
                 dbc.Col([dcc.Graph(figure=self.get_open_tasks_per_company_fig())], width=6),
-                dbc.Col([dcc.Graph(figure=self.get_task_count_by_age_fig())], width=6),
-                dbc.Col([], width=6), # null column
+                dbc.Col([html.Strong("Tasks distribution by age")], className="text-center mt-3 pt-3", width=12),
+                dbc.Col([dcc.Graph(figure=self.get_task_count_by_age_fig())], width=12),
                 dbc.Col([self.get_space_overdue_task_card(self.dash_values.get_open_tasks_per_space())], width=3),
                 dbc.Col([self.get_company_overdue_task_card(self.dash_values.get_task_count_by_company())], width=3),
                 dbc.Col(
@@ -295,10 +303,12 @@ class DashCards:
                 html.Div(id="callback_output2", style={"display": "none"}),  # ignore
                 # filters
                 dbc.Row(
-                    [dbc.Col([selectSpace], width=4),
-                     dbc.Col([selectCompany], width=4),
-                     dbc.Col([checkOverdue], width=2),
-                     dbc.Col([checkDate], width=2)],
+                    [dbc.Col([selectSpace], width=5),
+                     dbc.Col([selectCompany], width=5),
+                     dbc.Col([
+                         dbc.Col([checkOverdue], width=12),
+                         dbc.Col([checkDate], width=12)
+                     ], width=2)],
                     className="pt-3"
                 ),
                 # charts

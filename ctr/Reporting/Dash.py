@@ -153,6 +153,11 @@ class DashCards:
                      color='space',
                      hover_data=['space'],
                      )
+
+        fig.update_layout(
+            margin=dict(l=20, r=20, t=20, b=20),
+            showlegend=False
+        )
         return fig
 
     def get_open_tasks_per_company_fig(self):
@@ -165,7 +170,23 @@ class DashCards:
                      },
                      color='company',
                      hover_data=['company'])
+
+        fig.update_layout(
+            margin=dict(l=20, r=20, t=20, b=20),
+            showlegend=False
+        )
+
         return fig
+
+    @staticmethod
+    def SetColor(x):
+        y = float(x)
+        if (y < 0):
+            return "red"
+        elif (y == 0):
+            return "blue"
+        elif (y > 0):
+            return "green"
 
     def get_task_count_by_age_fig(self):
         df = self.dash_values.get_task_count_by_age()
@@ -181,9 +202,14 @@ class DashCards:
         fig.add_trace(
             go.Bar(
                 x=df["age"],
-                y=df["count"]
+                y=df["count"],
+                marker=dict(color=list(map(self.SetColor, df["age"].values)))
             ))
 
+        fig.update_layout(
+            margin=dict(l=20, r=20, t=20, b=20),
+            showlegend=False
+        )
         return fig
 
     def get_datatable_element(self, format_of_output="datatable"):

@@ -53,7 +53,8 @@ class DashValues:
 
     def get_task_count_by_age(self):
         return self.reporter.task_count_by_age(filter_companies=self.filter_companies,
-                                               filter_spaces=self.filter_spaces)
+                                               filter_spaces=self.filter_spaces,
+                                               filter_overdue=self.filter_overdue)
 
     def get_task_view(self):
         return self.reporter.get_tasks_view()

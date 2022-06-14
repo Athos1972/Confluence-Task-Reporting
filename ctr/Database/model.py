@@ -58,11 +58,11 @@ class User(Base):
     def __repr__(self):
         return f"User(id={self.id!r}, Name={self.conf_name!r} E-Mail={self.email!r}"
 
-    def __init__(self, conf_name, conf_userkey, email, display_name, last_crawled=None):
+    def __init__(self, conf_name, conf_userkey, email, display_name, last_crawled=None, company="unknown"):
         self.conf_name = conf_name
         self.conf_userkey = conf_userkey
         # Needs to be before email so that it will be overwritten with proper value
-        self.company = "unknown"
+        self.company = company
         self.email = email
         self.display_name = display_name
         self.last_crawled = last_crawled

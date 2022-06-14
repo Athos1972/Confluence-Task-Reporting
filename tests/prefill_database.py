@@ -17,7 +17,7 @@ from sqlalchemy.exc import IntegrityError
 # Empties testdatabase, creates 1500 random users, 1500 Confluence-Pages and 3000 Tasks for those users on those
 # pages
 
-db_connection = SqlConnector(file=f"sqlite:///{Path.cwd().joinpath('testdatabase.db')}")
+db_connection = SqlConnector(file=f"sqlite:///{Path.cwd().joinpath('../testdatabase.db')}")
 session = db_connection.get_session()
 
 faker = Faker(locale="en_US")
@@ -36,9 +36,11 @@ company_list = [
 ]
 
 for i in range(1501):
+    company = company_list[randint(0,len(company_list)-1)]
     user = User(conf_name=f"NBU{i}",
                 conf_userkey="".join(choices(string.ascii_letters, k=22)),
-                email = faker.email().replace("example", company_list[randint(0,len(company_list)-1)]),
+                email = faker.email().replace("example", company),
+                company = company,
                 display_name=faker.name())
     session.add(user)
     session.commit()

@@ -62,7 +62,6 @@ class PageReporting:
         logger.debug(f"returned {len(q)} entries. Statement was: {str(q)}")
         return q
 
-
 class TaskReporting:
     def __init__(self, db_connection: SqlConnector):
         self.db_connection = db_connection
@@ -75,24 +74,26 @@ class TaskReporting:
         else:
             date_to_filter = datetime.now()
         if not filter_spaces or len("".join(filter_spaces)) == 0:
-                q = session.query(func.count(Task.reminder_date), Page.space). \
-                    join(Page). \
-                    filter(Task.is_done == False,
-                           Task.reminder_date < date_to_filter). \
-                    group_by(Page.space)
+            q = session.query(func.count(Task.internal_id), Page.space). \
+                join(Page). \
+                filter(Task.is_done == False). \
+                group_by(Page.space)
         else:
-                q = session.query(func.count(Task.reminder_date), Page.space). \
-                    join(Page). \
-                    filter(Task.is_done == False,
-                           Task.reminder_date < date_to_filter,
-                           Page.space.in_(filter_spaces)). \
-                    group_by(Page.space)
+            q = session.query(func.count(Task.internal_id), Page.space). \
+                join(Page). \
+                filter(Task.is_done == False,
+                       Page.space.in_(filter_spaces)). \
+                group_by(Page.space)
 
         if filter_date:
             q = q.filter(Task.due_date.is_(None))
+        else:
+            q = q.filter(Task.reminder_date < date_to_filter)
 
         logger.debug(f"returned {q.count()} entries. Statement was: {str(q)}")
-        return pd.DataFrame(columns=['count', 'space'], data=list(q))
+        result = pd.DataFrame(columns=['count', 'space'], data=list(q))
+
+        return result
 
     def task_open_count_by_user(self):
         session = self.db_connection.get_session()
@@ -122,19 +123,19 @@ class TaskReporting:
         if not filter_companies or len("".join(filter_companies)) == 0:
             q = session.query(func.count(Task.internal_id), User.company). \
                 join(Task). \
-                filter(Task.is_done == False,
-                       Task.reminder_date < date_to_filter). \
+                filter(Task.is_done == False). \
                 group_by(User.company)
         else:
             q = session.query(func.count(Task.internal_id), User.company). \
                 join(Task). \
                 filter(Task.is_done == False,
-                       User.company.in_(filter_companies),
-                       Task.reminder_date < date_to_filter). \
+                       User.company.in_(filter_companies)). \
                 group_by(User.company)
 
         if filter_date:
             q = q.filter(Task.due_date.is_(None))
+        else:
+            q = q.filter(Task.reminder_date < date_to_filter)
 
         logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
         return pd.DataFrame(columns=['count', 'company'], data=list(q))
@@ -145,50 +146,38 @@ class TaskReporting:
         return pd.DataFrame(columns=["company"], data=list(q))
 
     @catch_sql_error
-    def task_count_by_age(self, filter_companies=None, filter_spaces=None,):
-        if not filter_companies or len("".join(filter_companies)) == 0:
-            if not filter_spaces or len("".join(filter_spaces)) == 0:
-                stmt = """SELECT round(julianday(current_timestamp) - julianday(tasks.due_date), 0) as age, 
-                count(tasks.due_date) as count from tasks
-                 WHERE round(julianday(current_timestamp) - julianday(tasks.due_date), 0) <= 3 
-                 AND tasks.is_done = False 
-                 GROUP BY age"""
-            else:
-                stmt = f"""SELECT round(julianday(current_timestamp) - julianday(tasks.due_date), 0) as age, 
-                count(tasks.due_date) as count from tasks
-                JOIN pages
-                ON pages.internal_id = tasks.page_link
-                 WHERE round(julianday(current_timestamp) - julianday(tasks.due_date), 0) <= 3 
-                 AND tasks.is_done = False 
-                 AND pages.space IN {'(' + ', '.join('"{}"'.format(t) for t in filter_spaces) + ')'}
-                 GROUP BY age"""
-        else:
-            if not filter_spaces or len("".join(filter_spaces)) == 0:
-                stmt = f"""SELECT round(julianday(current_timestamp) - julianday(tasks.due_date), 0) as age, 
-                count(tasks.due_date) as count from tasks JOIN conf_users ON conf_users.id = tasks.user_id
-                 WHERE round(julianday(current_timestamp) - julianday(tasks.due_date), 0) <= 3 
-                 AND tasks.is_done = False 
-                 AND conf_users.company IN {'(' + ', '.join('"{}"'.format(t) for t in filter_companies) + ')'}
-                 GROUP BY age"""
-            else:
-                stmt = f"""SELECT round(julianday(current_timestamp) - julianday(tasks.due_date), 0) as age, 
-                count(tasks.due_date) as count from tasks
-                JOIN pages, conf_users
-                ON pages.internal_id = tasks.page_link AND conf_users.id = tasks.user_id
-                 WHERE round(julianday(current_timestamp) - julianday(tasks.due_date), 0) <= 3 
-                 AND tasks.is_done = False
-                 AND pages.space IN {'(' + ', '.join('"{}"'.format(t) for t in filter_spaces) + ')'}
-                 AND conf_users.company IN {'(' + ', '.join('"{}"'.format(t) for t in filter_companies) + ')'}
-                 GROUP BY age"""
+    def task_count_by_age(self, filter_companies=None, filter_spaces=None, filter_overdue=False):
+
+        overdue_stmt = ""
+        space_stmt = ""
+        company_stmt = ""
+
+        if filter_companies:
+            company_stmt = "AND conf_users.company IN (" + ', '.join('"{}"'.format(t) for t in filter_companies) + ")"
+        if filter_spaces:
+            space_stmt = "AND pages.space IN (" + ', '.join('"{}"'.format(t) for t in filter_spaces) + ")"
+        if filter_overdue:
+            overdue_stmt = "AND age < 0"
+
+        stmt = f"""SELECT round(julianday(current_timestamp) - julianday(tasks.due_date), 0) as age, 
+        count(tasks.due_date) as count from tasks 
+        join conf_users on tasks.user_id = conf_users.id 
+        join pages on tasks.page_link = pages.internal_id 
+         WHERE round(julianday(current_timestamp) - julianday(tasks.due_date), 0) <= 3 
+         AND tasks.is_done = False 
+         {space_stmt}
+         {company_stmt}
+         {overdue_stmt}
+         GROUP BY age"""
+
         session = self.db_connection.get_session()
         q = session.execute(stmt)
 
         result = list(q)
-        print(len(result))
         logger.debug(f"returned {len(result)} entries. Statement was {stmt}")
         dataframe = pd.DataFrame(columns=['age', 'count'], data=result)
         dataframe["age"] = dataframe["age"].astype(str)
-        print(dataframe)
+
         return dataframe
 
     @catch_sql_error
@@ -200,13 +189,13 @@ class TaskReporting:
                 stmt = """select age, page_space from 
                         (SELECT round(julianday(CURRENT_TIMESTAMP) - julianday(tasks.reminder_date),0) AS age, 
                         pages.space AS page_space FROM tasks JOIN pages ON pages.internal_id = tasks.page_link 
-                        WHERE tasks.is_done = 0 AND tasks.reminder_date) group by age
+                        WHERE tasks.is_done = 0 AND tasks.reminder_date IS NOT NULL) group by age
                         """
             else:
                 stmt = """select age, page_space from 
                         (SELECT round(julianday(CURRENT_TIMESTAMP) - julianday(tasks.reminder_date),0) AS age, 
                         pages.space AS page_space FROM tasks JOIN pages ON pages.internal_id = tasks.page_link 
-                        WHERE tasks.is_done = 0 AND tasks.reminder_date < DATE()) group by age
+                        WHERE tasks.is_done = 0 AND tasks.reminder_date < DATE() AND tasks.reminder_date IS NOT NULL ) group by age
                         """
             session = self.db_connection.get_session()
             q = session.execute(stmt)

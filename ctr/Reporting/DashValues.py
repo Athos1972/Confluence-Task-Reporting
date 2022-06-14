@@ -16,10 +16,14 @@ class DashValues:
         self.filter_overdue = False
         self.filter_spaces = None
         self.filter_companies = None
+        self.filter_date = False
 
     def set_filter(self, filter_type, filter_value):
         if filter_type == "overdue":
             self.filter_overdue = filter_value
+            return
+        if filter_type == "date":
+            self.filter_date = filter_value
             return
         if filter_type == "space":
             self.filter_spaces = filter_value
@@ -34,22 +38,28 @@ class DashValues:
 
     def get_open_tasks_per_space(self):
         return self.reporter.task_count_by_space(filter_spaces=self.filter_spaces,
-                                                 filter_overdue=self.filter_overdue)
+                                                 filter_overdue=self.filter_overdue,
+                                                 filter_date=self.filter_date)
 
     def get_task_count_by_company(self):
         return self.reporter.task_count_by_company(filter_companies=self.filter_companies,
-                                                   filter_overdue=self.filter_overdue)
+                                                   filter_overdue=self.filter_overdue,
+                                                   filter_date=self.filter_date)
 
     def get_tasks_age(self):
-        x = self.reporter.tasks_by_age_and_space(filter_overdue=self.filter_overdue)
+        x = self.reporter.tasks_by_age_and_space(filter_overdue=self.filter_overdue,
+                                                 filter_date=self.filter_date)
         return x
+
+    def get_task_count_by_age(self):
+        return self.reporter.task_count_by_age(filter_companies=self.filter_companies,
+                                               filter_spaces=self.filter_spaces)
 
     def get_task_view(self):
         return self.reporter.get_tasks_view()
 
     def get_grid_data(self, format_of_output="table"):
         """
-
         :param format_of_output: "table" for HTML-Table (=default) or "datatable" for data_table-Link format
         :return:
         """
@@ -97,6 +107,9 @@ class DashValues:
 
         if self.filter_overdue:
             grid_data = grid_data[grid_data["Due"] < date.today()]
+
+        if self.filter_date:
+            grid_data = grid_data[grid_data["Due"].isna()]
 
         self.max_pages = len(grid_data) // 25
 

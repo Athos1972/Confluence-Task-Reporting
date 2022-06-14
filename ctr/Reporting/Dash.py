@@ -70,15 +70,20 @@ class DashCards:
         return card
 
     @staticmethod
-    def get_task_average_time_card(tasks_by_age_data=None):
+    def get_task_average_time_card(tasks_by_age_data=None, filter_date=False):
         if not any(tasks_by_age_data):
             tasks_by_age_data = {"age": 0}
+
+        tasks_by_age_value = "-"
+        if not filter_date:
+            tasks_by_age_value = f"{int(tasks_by_age_data['age'].mean())} days"
+
         card = dbc.Card(
             # dbc.CardHeader("Average Task Age"),
             dbc.CardBody(
                 [
                     html.H5(html.Center("Average Task Age"), className="card-title"),
-                    html.P(html.Center(html.Strong(f"{int(tasks_by_age_data['age'].mean())} days")),
+                    html.P(html.Center(html.Strong(tasks_by_age_value)),
                            className="card-text",
                            ),
                 ]
@@ -90,10 +95,10 @@ class DashCards:
 
     def get_space_selector(self, call_type="Select"):
         if call_type == "Dropdown":
-            # FIXME: Works but looks terrible. The DIV should look nicer. Also no callback implemented yet.
-            selector = html.Div([
-                "Select space(s)",
-                dcc.Dropdown(self.dash_constants.get_spaces()[1:], id="space_selector", multi=True), ])
+            selector = dbc.InputGroup(
+                [dbc.InputGroupText("Select space(s)"),
+                 dcc.Dropdown(self.dash_constants.get_spaces()[1:], id="selectSpace", multi=True, style={'flex-grow' : '1'})],
+                className="mb-3 d-flex w-100")
             return selector
         elif call_type == "Select":
             selector = dbc.InputGroup(
@@ -104,14 +109,21 @@ class DashCards:
                 className="mb-3")
             return selector
 
-    def get_company_selector(self):
-        selector = dbc.InputGroup(
-            [dbc.InputGroupText("Company"),
-             dbc.Select(id="selectCompany",
-                        value=None,
-                        options=[{"label": company, "value": company} for company in
-                                 self.dash_constants.get_companies()])],
-            className="mb-3")
+    def get_company_selector(self, call_type="Select"):
+        if call_type == "Dropdown":
+            selector = dbc.InputGroup(
+                [dbc.InputGroupText("Select company(ies)"),
+                 dcc.Dropdown(self.dash_constants.get_companies()[1:], id="selectCompany", multi=True,
+                              style={'flex-grow': '1'})],
+                className="mb-3 d-flex w-100")
+        elif call_type == "Select":
+            selector = dbc.InputGroup(
+                [dbc.InputGroupText("Company"),
+                 dbc.Select(id="selectCompany",
+                            value=None,
+                            options=[{"label": company, "value": company} for company in
+                                     self.dash_constants.get_companies()])],
+                className="mb-3")
 
         return selector
 
@@ -122,20 +134,48 @@ class DashCards:
             className="mt-2")
         return element
 
+    @staticmethod
+    def get_date_checkbox():
+        element = dbc.InputGroup(
+            [dbc.Checkbox(id="checkDate", value=False, label="Tasks without date Only")],
+            className="mt-2")
+        return element
+
     def get_open_tasks_per_space_fig(self):
-        fig = px.bar(data_frame=self.dash_values.get_open_tasks_per_space(),
+        fig = px.bar(data_frame=self.dash_values.get_open_tasks_per_space().sort_values(by=["count"]),
                      x='space',
                      y='count',
+                     labels={
+                         "count": "Count",
+                         "space": "Space"
+                     },
                      color='space',
-                     hover_data=['space'])
+                     hover_data=['space'],
+                     )
         return fig
 
     def get_open_tasks_per_company_fig(self):
-        fig = px.bar(data_frame=self.dash_values.get_task_count_by_company(),
+        fig = px.bar(data_frame=self.dash_values.get_task_count_by_company().sort_values(by=["count"]),
                      x='company',
                      y='count',
+                     labels={
+                         "count" : "Count",
+                         "company" : "Company"
+                     },
                      color='company',
                      hover_data=['company'])
+        return fig
+
+    def get_task_count_by_age_fig(self):
+        fig = px.bar(data_frame=self.dash_values.get_task_count_by_age(),
+                     x='age',
+                     y='count',
+                     labels={
+                         "count": "Count",
+                         "age": "Age"
+                     },
+                     color='age',
+                     hover_data=['age'])
         return fig
 
     def get_datatable_element(self, format_of_output="datatable"):
@@ -224,9 +264,13 @@ class DashCards:
                         width=6),
                 dbc.Col([dcc.Graph(figure=self.get_open_tasks_per_space_fig())], width=6),
                 dbc.Col([dcc.Graph(figure=self.get_open_tasks_per_company_fig())], width=6),
+                dbc.Col([dcc.Graph(figure=self.get_task_count_by_age_fig())], width=6),
+                dbc.Col([], width=6), # null column
                 dbc.Col([self.get_space_overdue_task_card(self.dash_values.get_open_tasks_per_space())], width=3),
                 dbc.Col([self.get_company_overdue_task_card(self.dash_values.get_task_count_by_company())], width=3),
-                dbc.Col([self.get_task_average_time_card(self.dash_values.get_tasks_age())], width=3),
+                dbc.Col(
+                    [self.get_task_average_time_card(self.dash_values.get_tasks_age(), self.dash_values.filter_date)],
+                    width=3),
                 dbc.Col([
                     dbc.Button(id="btn_send_reminder", children=["Send Reminder"], className="w-100 h-60",
                                n_clicks=0)
@@ -240,9 +284,10 @@ class DashCards:
         return structure
 
     def get_layout(self):
-        selectCompany = self.get_company_selector()
-        selectSpace = self.get_space_selector()
+        selectCompany = self.get_company_selector(call_type="Dropdown")
+        selectSpace = self.get_space_selector(call_type="Dropdown")
         checkOverdue = self.get_overdue_checkbox()
+        checkDate = self.get_date_checkbox()
 
         layout = dbc.Container(
             children=[
@@ -250,9 +295,10 @@ class DashCards:
                 html.Div(id="callback_output2", style={"display": "none"}),  # ignore
                 # filters
                 dbc.Row(
-                    [dbc.Col([selectSpace], width=5),
-                     dbc.Col([selectCompany], width=5),
-                     dbc.Col([checkOverdue], width=2)],
+                    [dbc.Col([selectSpace], width=4),
+                     dbc.Col([selectCompany], width=4),
+                     dbc.Col([checkOverdue], width=2),
+                     dbc.Col([checkDate], width=2)],
                     className="pt-3"
                 ),
                 # charts

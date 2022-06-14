@@ -13,7 +13,6 @@ dash_values = DashValues(db_connection=db_connection)
 dash_constants = DashConstants(db_connection=db_connection)
 dash_cards = DashCards(dash_values=dash_values, dash_constants=dash_constants)
 
-
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.config.suppress_callback_exceptions = True
 
@@ -24,15 +23,17 @@ app.layout = dash_cards.get_layout()
     Output(component_id='dashboard', component_property='children'),
     [Input(component_id='selectCompany', component_property='value'),
      Input(component_id='selectSpace', component_property='value'),
-     Input(component_id='checkOverdue', component_property='value')]
+     Input(component_id='checkOverdue', component_property='value'),
+     Input(component_id='checkDate', component_property='value')]
 )
-def select_options(selected_company, selected_space, checked_overdue):
+def select_options(selected_company, selected_space, checked_overdue, checked_date):
     """
     Parameters from frontend stored in filter-values for database query operations.
 
     :param selected_company:
     :param selected_space:
     :param checked_overdue:
+    :param checked_date
     :return:
     """
 
@@ -41,11 +42,14 @@ def select_options(selected_company, selected_space, checked_overdue):
         input_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
         if input_id == "selectSpace":
-            dash_values.set_filter("space", [selected_space])
+            dash_values.set_filter("space", selected_space)
         elif input_id == "selectCompany":
-            dash_values.set_filter("company", [selected_company])
+            print(selected_company)
+            dash_values.set_filter("company", selected_company)
         elif input_id == "checkOverdue":
             dash_values.set_filter("overdue", checked_overdue)
+        elif input_id == "checkDate":
+            dash_values.set_filter("date", checked_date)
 
     logger.info("Sent new result to Frontend")
     return dash_cards.get_chart_rows()

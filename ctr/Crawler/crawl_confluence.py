@@ -112,7 +112,7 @@ class TaskWrapper(Wrapper):
             new_task = self.__create_new_task(subquery_session)
 
         if not new_task:
-            logger.critical(f"Something went wrong. Check log before. Can't work with this record: "
+            logger.warning(f"Something went wrong. Check log before. Can't work with this record: "
                             f"{self.task_description}")
             subquery_session.rollback()
             self.session.rollback()
@@ -249,6 +249,8 @@ class TaskWrapper(Wrapper):
             page = Page(page_link=self.page_link,
                         page_name=self.page_name)
             page = self.get_space_from_pagelink(page)
+            if not page:
+                return None
             subquery_session.add(page)
             subquery_session.commit()
             new_task.page_link = page.internal_id
@@ -288,6 +290,10 @@ class TaskWrapper(Wrapper):
             # Get the unique page-id and the space-name from HTML-Result:
             page.page_id = self.__find_ajs_values_in_string("ajs-page-id", result.text)
             page.space = self.__find_ajs_values_in_string("ajs-space-key", result.text)
+
+        if page.space[0] == "~":
+            logger.info(f"Ignoring page {page.page_name} because space is personal space {page.space}")
+            return None       # Don't accept personal spaces
 
         return page
 

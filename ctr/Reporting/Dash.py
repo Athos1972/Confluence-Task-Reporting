@@ -7,6 +7,7 @@ import dash_bootstrap_components as dbc
 from dash import html, dcc, dash_table
 import plotly.express as px
 import plotly.graph_objects as go
+import pandas as pd
 
 
 class DashConstants:
@@ -98,7 +99,8 @@ class DashCards:
         if call_type == "Dropdown":
             selector = dbc.InputGroup(
                 [dbc.InputGroupText("Select space(s)", className="w-100"),
-                 dcc.Dropdown(self.dash_constants.get_spaces()[1:], id="selectSpace", multi=True, style={"flex-grow" : "1"})],
+                 dcc.Dropdown(self.dash_constants.get_spaces()[1:], id="selectSpace", multi=True,
+                              style={"flex-grow": "1"})],
                 className="mb-3 d-flex w-100")
             return selector
         elif call_type == "Select":
@@ -201,7 +203,7 @@ class DashCards:
         fig = go.Figure()
 
         # TODO: add figure legend
-        fig.add_trace(
+        """fig.add_trace(
             go.Scatter(
                 x=df["age"],
                 y=df["count"]
@@ -211,12 +213,21 @@ class DashCards:
             go.Bar(
                 x=df["age"],
                 y=df["count"],
-                marker=dict(color=list(map(self.SetColor, df["age"].values)))
+                marker=dict(color=list(map(self.SetColor, df["age"].values))),
             ))
+
+        fig = px.histogram(df, x="age", y="count", color="age",
+                           marginal="violin", # or violin, rug
+                           hover_data=df.columns)"""
+        df["color"] = list(map(self.SetColor, df["age"].values))
+        print(df["color"].values)
+        fig = px.histogram(df, x='age', marginal="box", color="color",
+                           color_discrete_sequence=["#EF553B", "#636EFA", "#00CC96"])
 
         fig.update_layout(
             margin=dict(l=20, r=20, t=20, b=20),
-            showlegend=False
+            bargap=0,
+            showlegend=False,
         )
         return fig
 
@@ -239,8 +250,8 @@ class DashCards:
                                          'color': 'white'
                                      },
                                      style_cell={
- 'whiteSpace': 'pre-line'
- },
+                                         'whiteSpace': 'pre-line'
+                                     },
                                      # style_cell={
                                      #     'fontFamily': 'Open Sans',
                                      #     'textAlign': 'left',
@@ -353,7 +364,7 @@ class DashCards:
                 # charts
                 dbc.Row(self.get_chart_rows(),
                         id="dashboard"),
-                ]
+            ]
         )
 
         return layout

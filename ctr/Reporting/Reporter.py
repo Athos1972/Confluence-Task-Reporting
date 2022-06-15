@@ -159,23 +159,21 @@ class TaskReporting:
         if filter_overdue:
             overdue_stmt = "AND age < 0"
 
-        stmt = f"""SELECT round(julianday(current_timestamp) - julianday(tasks.due_date), 0) as age, 
-        count(tasks.due_date) as count from tasks 
-        join conf_users on tasks.user_id = conf_users.id 
-        join pages on tasks.page_link = pages.internal_id 
-         WHERE tasks.is_done = False 
-         {space_stmt}
-         {company_stmt}
-         {overdue_stmt}
-         GROUP BY age"""
+        stmt = f"""SELECT round(julianday(current_timestamp) - julianday(tasks.due_date), 0) as age,
+        tasks.due_date as date,
+        tasks.due_date as count from tasks
+        join conf_users on tasks.user_id = conf_users.id
+        join pages on tasks.page_link = pages.internal_id
+        WHERE tasks.is_done = 0 AND tasks.due_date IS NOT NULL {space_stmt} {company_stmt} {overdue_stmt}
+        ORDER BY age"""
 
         session = self.db_connection.get_session()
         q = session.execute(stmt)
 
         result = list(q)
         logger.debug(f"returned {len(result)} entries. Statement was {stmt}")
-        dataframe = pd.DataFrame(columns=['age', 'count'], data=result)
-        dataframe["age"] = dataframe["age"].astype(str)
+        dataframe = pd.DataFrame(columns=['age', 'date', 'count'], data=result)
+        dataframe["age"] = dataframe["age"].astype(int).astype(str)
 
         return dataframe
 

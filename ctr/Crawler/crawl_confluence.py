@@ -106,27 +106,27 @@ class TaskWrapper(Wrapper):
         :return:
         """
         subquery_session = self.db_connection.get_session()
-        new_task = self.__get_existing_task()
+        updated_task = self.__get_existing_task()
 
-        if not new_task:
-            new_task = self.__create_new_task(subquery_session)
+        if not updated_task:
+            updated_task = self.__create_new_task(subquery_session)
 
-        if not new_task:
+        if not updated_task:
             logger.warning(f"Something went wrong. Check log before. Can't work with this record: "
-                            f"{self.task_description}")
+                           f"{self.task_description}")
             subquery_session.rollback()
             self.session.rollback()
             return
 
         # Update task fields, which are provided in __init__
-        new_task = self.__update_all_fields_in_task(new_task)
+        updated_task = self.__update_all_fields_in_task(updated_task)
         # Update task fields derived from the task text
-        new_task = self._derive_attributes_from_task_description(new_task)
+        updated_task = self._derive_attributes_from_task_description(updated_task)
 
         if self.username:
             try:
                 user = subquery_session.query(User).filter(User.conf_name == self.username).first()
-                new_task.user_id = user.id
+                updated_task.user_id = user.id
                 user.tasks_last_crawled = datetime.now()
                 subquery_session.commit()
             except AttributeError:  # User doesn't exist in Database?!
@@ -135,28 +135,32 @@ class TaskWrapper(Wrapper):
                 return None
 
         self.session.commit()
-        return new_task.internal_id
+        return updated_task.internal_id
 
     def __get_existing_task(self):
-        new_task = None
+        found_task = None
         if self.global_id:
             # Try finding the existing task record via global_id.
             found_task = self.session.query(Task).filter(Task.global_id == self.global_id)
             if found_task.count() > 0:
                 # Task already exists.
                 logger.debug(f"Found entry {found_task[0].internal_id} with global_id = {self.global_id}")
-                new_task = found_task[0]
-        if not new_task:
+                found_task = found_task[0]
+            else:
+                found_task = None
+        if not found_task:
             # Could be, that the tasks was crawled from other place where we don't know global_id. Then we might
             # find it from page_id and task_id combination.
             found_task = self.session.query(Task).join(Page). \
                 filter(Task.task_id == self.task_id, Page.page_link == self.page_link)
-            if found_task:
+            if found_task.count() > 0:
                 try:
-                    new_task = found_task[0]
+                    found_task = found_task[0]
                 except IndexError:
                     pass
-        return new_task
+            else:
+                found_task = None
+        return found_task
 
     def __create_new_task(self, subquery_session):
         """

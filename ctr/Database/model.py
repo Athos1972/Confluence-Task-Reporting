@@ -130,6 +130,7 @@ class Task(Base):
 def update_due_date_from_second_date(target:Task, value, oldvalue, initiator):
     """
     If second date (=value) is lower than reminder date then this is the due_date.
+    If second date (=value) is not filled set the due_date to reminder_date (=1st date)
     :param target:
     :param value:
     :param oldvalue:
@@ -147,6 +148,8 @@ def update_due_date_from_second_date(target:Task, value, oldvalue, initiator):
         except TypeError:
             logger.critical(f"Received {value}. Target.reminder_date was {target.reminder_date}. Didn't do anything.")
             return target
+    if not value:
+        target.due_date = target.reminder_date
     return target
 
 

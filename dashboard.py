@@ -3,12 +3,14 @@ import dash_bootstrap_components as dbc
 from dash import Input, Output,callback_context
 from ctr.Database.connection import SqlConnector
 from ctr.Util import logger
+from ctr.Util.Util import Util
 from ctr.Reporting.Dash import DashConstants, DashCards
 from ctr.Reporting.DashValues import DashValues
 
 
 # Loading database connection
 db_connection = SqlConnector()
+Util.load_env_file()
 dash_values = DashValues(db_connection=db_connection)
 dash_constants = DashConstants(db_connection=db_connection)
 dash_cards = DashCards(dash_values=dash_values, dash_constants=dash_constants)

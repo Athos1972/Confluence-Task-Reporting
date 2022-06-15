@@ -4,7 +4,7 @@ from datetime import date
 
 from ctr.Database.connection import SqlConnector
 from ctr.Reporting import Reporter as Reporter
-from ctr.Util import logger
+from ctr.Util import logger, global_config
 
 
 class DashValues:
@@ -76,16 +76,18 @@ class DashValues:
         task_selectors = []
         page_hyperlinks = []
         for i in range(len(page_names)):
+            hyper_link = f"{global_config.get_config('CONF_BASE_URL')}{page_links[i]}"
             if format_of_output == "table":
                 # build page link column
                 page_name = page_names[i]
                 page_link = page_links[i]
-                page_hyperlinks.append(html.A([page_name], href=page_link))
+                page_hyperlinks.append(html.A([page_name],
+                                              href=hyper_link))
                 task_selectors.append(dbc.Checkbox(
                     id=f"select&{internal_ids[i]}",
                     value=False, ))
             elif format_of_output == "datatable":
-                page_hyperlinks.append(f"[{page_names[i]}]({page_links[i]})")
+                page_hyperlinks.append(f"[{page_names[i]}]({hyper_link})")
                 task_selectors.append(False)
             else:
                 logger.critical(f"Format of output-table unknown: {format_of_output}. Page-names will be empty.")

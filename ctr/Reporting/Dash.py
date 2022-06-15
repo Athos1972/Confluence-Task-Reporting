@@ -180,13 +180,21 @@ class DashCards:
 
     @staticmethod
     def SetColor(x):
+        """
+        Set the color of the age graph. Minus values (days in the past) are red, today is blue,
+        future due dates are green.
+        :param x: Integer
+        :return: Color name
+        """
         y = float(x)
-        if (y < 0):
+        if y < 0:
             return "red"
-        elif (y == 0):
+        elif y == 0:
             return "blue"
-        elif (y > 0):
+        elif y > 0:
             return "green"
+        else:
+            return "blue"
 
     def get_task_count_by_age_fig(self):
         df = self.dash_values.get_task_count_by_age()
@@ -220,6 +228,7 @@ class DashCards:
                                      page_size=DashCards.PAGE_SIZE,
                                      sort_action="native",
                                      sort_mode="multi",
+                                     filter_action="native",
                                      row_selectable="multi",
                                      # not a good idea: fill_width=False,
                                      style_header=
@@ -229,6 +238,9 @@ class DashCards:
                                          'backgroundColor': 'rgb(100, 100, 100)',
                                          'color': 'white'
                                      },
+                                     style_cell={
+ 'whiteSpace': 'pre-line'
+ },
                                      # style_cell={
                                      #     'fontFamily': 'Open Sans',
                                      #     'textAlign': 'left',
@@ -300,6 +312,7 @@ class DashCards:
                 dbc.Col([dcc.Graph(figure=self.get_open_tasks_per_company_fig())], width=6),
                 dbc.Col([html.Strong("Tasks distribution by age")], className="text-center mt-3 pt-3", width=12),
                 dbc.Col([dcc.Graph(figure=self.get_task_count_by_age_fig())], width=12),
+                dbc.Col([html.Div(html.Center(""))], width=12),
                 dbc.Col([self.get_space_overdue_task_card(self.dash_values.get_open_tasks_per_space())], width=3),
                 dbc.Col([self.get_company_overdue_task_card(self.dash_values.get_task_count_by_company())], width=3),
                 dbc.Col(
@@ -340,16 +353,7 @@ class DashCards:
                 # charts
                 dbc.Row(self.get_chart_rows(),
                         id="dashboard"),
-                # dbc.Row(self.get_datatable_column())
-                # dbc.Pagination(id="pagination",
-                #                min_value=1,
-                #                max_value=self.dash_values.get_max_pages(),
-                #                className="justify-content-center",
-                #                fully_expanded=False,
-                #                first_last=True,
-                #                previous_next=True)
-            ]
-
+                ]
         )
 
         return layout

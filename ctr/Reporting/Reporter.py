@@ -163,8 +163,7 @@ class TaskReporting:
         count(tasks.due_date) as count from tasks 
         join conf_users on tasks.user_id = conf_users.id 
         join pages on tasks.page_link = pages.internal_id 
-         WHERE round(julianday(current_timestamp) - julianday(tasks.due_date), 0) <= 3 
-         AND tasks.is_done = False 
+         WHERE tasks.is_done = False 
          {space_stmt}
          {company_stmt}
          {overdue_stmt}
@@ -246,19 +245,39 @@ class TaskReporting:
             x.unwrap()
         for x in bs.findAll("li"):
             x.unwrap()
+        for x in bs.findAll("em"):
+            x.unwrap()
+        for x in bs.findAll("p"):
+            text = x.text
+            x.replaceWith(f"\n{text}")
+        for x in bs.findAll("strong"):
+            x.unwrap()
+        for x in bs.findAll("img"):
+            x.replaceWith("")
         for x in bs.findAll("span", attrs={"class": "placeholder-inline-tasks"}):
             x.unwrap()
         for x in bs.findAll("a", attrs={"class": "confluence-userlink"}):
             name = x.text
             x.replaceWith(name)
+        for x in bs.findAll("a", attrs={"class": "jira-issue-key"}):
+            name = x.text
+            x.replaceWith(name)
+        for x in bs.findAll("a"):
+            name = x.text
+            x.replaceWith(name)
+
+        # Remove all further generic Spans.
+        for x in bs.findAll("span"):
+            x.unwrap()
 
         result = str(bs)
 
         replace_table = [
-            ["\n", ""],
-            ["<br/>", "\r\n"],
+            ["<br/>", "  \n"],
             ["&gt;", ">"],
-            ["&lt;", "<"]
+            ["&lt;", "<"],
+            ["<p>", "  \n"],
+            ["</p>", ""]
         ]
 
         for entry in replace_table:
@@ -272,7 +291,8 @@ class TaskReporting:
         q = session.query(Task.internal_id, Task.task_description, Task.reminder_date,
                           Task.second_date, Task.due_date,
                           User.display_name, Page.space, Page.page_name, Page.page_link, User.company). \
-            join(User, Page).where(Page.internal_id == Task.page_link, User.id == Task.user_id, Task.is_done == False)
+            join(User, Page).where(Page.internal_id == Task.page_link, User.id == Task.user_id,
+                                   Task.is_done == False)
 
         logger.debug(f"returned {len(list(q))} entries. Statement was: {str(q)}")
 

@@ -14,10 +14,10 @@ class Util:
     @staticmethod
     def load_env_file():
         """
-        Ließt das .env-File und schreibt die beiden Parameter conf_user und conf_pwd in das Environment
-        Die Parameter werden von der JIRA und CONFLUENCE-Instanz für die Anmeldung verwendet.
+        Reads the .env-File and writes both parameters conf_user and conf_pwd to the environment.
+        We need those parameters when running Confluence crawlers.
         """
-        """try:
+        try:
             load_dotenv()
         except FileNotFoundError:
             logger.critical(f"Du hast kein .env-File. Abbruch. Check README.md")
@@ -31,8 +31,9 @@ class Util:
             sys.exit("Check log und README.MD (CONF_PWD)")
 
         if environ.get("CONF_BASE_URL"):
-            # Übernahme von CONF_BASE_URL aus dem .env-File in die globalen Konstanten.
-            global_config.config["CONF_BASE_URL"] = environ["CONF_BASE_URL"]"""
+            # Read CONF_BASE_URL and write to global_config.
+            # We don't do that for user and password for increased security (by a bit :) ).
+            global_config.config["CONF_BASE_URL"] = environ["CONF_BASE_URL"]
 
     @staticmethod
     def write_pd_to_excel(file_name, sheetname, dataframe):

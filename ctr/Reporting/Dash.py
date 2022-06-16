@@ -330,8 +330,11 @@ class DashCards:
                     [self.get_task_average_time_card(self.dash_values.get_tasks_age(), self.dash_values.filter_date)],
                     width=3),
                 dbc.Col([
-                    dbc.Button(id="btn_send_reminder", children=["Send Reminder"], className="w-100 h-60",
-                               n_clicks=0)
+                    dbc.Button(id="btn_send_reminder", children=["Send Reminder"], className="w-100 h-40",
+                               n_clicks=0),
+                    dbc.Button(id="btn_download_selected", children=["Download selection"], className="w-100 h-40",
+                               n_clicks=0, style={"margin-top": "10px"}),
+                    dcc.Download(id="download_file")
                 ], width=3),
                 self.get_datatable_column(),
             ]
@@ -350,7 +353,6 @@ class DashCards:
         layout = dbc.Container(
             children=[
                 html.Div(id="callback_output", style={"display": "none"}),  # ignore
-                html.Div(id="callback_output2", style={"display": "none"}),  # ignore
                 # filters
                 dbc.Row(
                     [dbc.Col([selectSpace], width=5),

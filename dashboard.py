@@ -1,6 +1,6 @@
 import dash
 import dash_bootstrap_components as dbc
-from dash import Input, Output,callback_context
+from dash import Input, Output, callback_context, dcc
 from ctr.Database.connection import SqlConnector
 from ctr.Util import logger
 from ctr.Util.Util import Util
@@ -26,7 +26,8 @@ app.layout = dash_cards.get_layout()
     [Input(component_id='selectCompany', component_property='value'),
      Input(component_id='selectSpace', component_property='value'),
      Input(component_id='checkOverdue', component_property='value'),
-     Input(component_id='checkDate', component_property='value')]
+     Input(component_id='checkDate', component_property='value')],
+    prevent_initial_call=True
 )
 def select_options(selected_company, selected_space, checked_overdue, checked_date):
     """
@@ -59,18 +60,27 @@ def select_options(selected_company, selected_space, checked_overdue, checked_da
 
 @app.callback(
     Output('callback_output', 'children'),
-    Input('btn_send_reminder', 'n_clicks'),
+    [Input('btn_send_reminder', 'n_clicks')],
+    prevent_initial_call=True
 )
-def send_reminder(reminder_btn):
+def process_buttons(btn):
     changed_id = [p['prop_id'] for p in callback_context.triggered][0]
 
     # reminder_btn = 1, as not to spam. If the user_tasks chooses a space or a company, this counter is reset and therefore
     # can send another reminder to specific space or company through active_space, active_company
-    if 'btn_send_reminder' in changed_id and reminder_btn == 1:
+    if 'btn_send_reminder' in changed_id and btn == 1:
         print("Sent Reminder!")
 
     return ""
 
+
+@app.callback(
+    Output('download_file', 'data'),
+    Input("btn_download_selected", "n_clicks"),
+    prevent_initial_call=True
+)
+def process_download(n_clicks):
+    return dcc.send_data_frame(dash_values.get_grid_data().to_excel, "myexcel.xlsx")
 
 # @app.callback(
 #     Output('datatable-row-ids-container', 'children'),

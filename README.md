@@ -1,18 +1,19 @@
 # Why?
 Chances are you read this because you have the same problem like many other projects around the globe: Confluence has
-become not only your knowledge management tool but you also use it for task management. Of course there is JIRA for
+become not only your knowledge management tool, but you also use it for task management. Of course there is JIRA for
 developers and teams, but Tasks in Confluence are used for all those other folks who don't directly work in development 
-teams but are also important for the project.
+teams but are also important for the project as well as for tasks, which are not concrete enough to create a JIRA 
+element.
 
 A few months in the journey you become aware that not everybody works properly with their tasks. Occasionally you find
-outdated tasks in old protocols and you think "If I find this one, most probably there are more!". So you fire up the 
-built-in task list feature for all users and you can't believe what you see. 100s or 1000s of overdue tasks, partially
-of people who are not even on the project any more, too many (and no really nice UX from Atlassian in this area) to 
-manually contact everybody.
+outdated tasks in old protocols. You think: "If I find this one, most probably there are more!". So you fire up the 
+built-in task list feature for all users. You can't believe what you see. 100s or 1000s of overdue tasks, partially
+of colleagues who are not even on the project anymore. Way too many (and no really nice UX from Atlassian in this area) 
+to individually contact everybody.
 
-Either you have a good Project Office, who will chase each individual or you need another solution. Even when they chase
-each person, how do you check success? A weekly report, manually filled by your Project Office colleagues? Don't they
-have more important things to do?
+Either you have a good Project Office, who will chase each individual, or you need another solution. Even when they 
+chase each person, how do you check success of this measure? A weekly report, manually filled by your Project Office 
+colleagues? Don't they have more valuable things to do?
 
 Look no further! Help is here!
 

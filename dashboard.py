@@ -25,11 +25,10 @@ app.layout = dash_cards.get_layout()
     Output(component_id='dashboard', component_property='children'),
     [Input(component_id='selectCompany', component_property='value'),
      Input(component_id='selectSpace', component_property='value'),
-     Input(component_id='checkOverdue', component_property='value'),
-     Input(component_id='checkDate', component_property='value')],
+     Input(component_id='radioSelectors', component_property='value'),],
     prevent_initial_call=True
 )
-def select_options(selected_company, selected_space, checked_overdue, checked_date):
+def select_options(selected_company, selected_space, radio_selector):
     """
     Parameters from frontend stored in filter-values for database query operations.
 
@@ -40,6 +39,7 @@ def select_options(selected_company, selected_space, checked_overdue, checked_da
     :return:
     """
 
+    SELECTORS = DashCards.SELECTORS
     ctx = dash.callback_context
     if ctx.triggered:
         input_id = ctx.triggered[0]["prop_id"].split(".")[0]
@@ -49,10 +49,16 @@ def select_options(selected_company, selected_space, checked_overdue, checked_da
         elif input_id == "selectCompany":
             print(selected_company)
             dash_values.set_filter("company", selected_company)
-        elif input_id == "checkOverdue":
-            dash_values.set_filter("overdue", checked_overdue)
-        elif input_id == "checkDate":
-            dash_values.set_filter("date", checked_date)
+        elif input_id == "radioSelectors":
+            if SELECTORS[radio_selector] == 2:
+                dash_values.set_filter("overdue", True)
+                dash_values.set_filter("date", False)
+            elif SELECTORS[radio_selector] == 1:
+                dash_values.set_filter("overdue", False)
+                dash_values.set_filter("date", True)
+            else:
+                dash_values.set_filter("overdue", False)
+                dash_values.set_filter("date", False)
 
     logger.info("Sent new result to Frontend")
     return dash_cards.get_chart_rows()

@@ -17,7 +17,7 @@ class Util:
         Ließt das .env-File und schreibt die beiden Parameter conf_user und conf_pwd in das Environment
         Die Parameter werden von der JIRA und CONFLUENCE-Instanz für die Anmeldung verwendet.
         """
-        try:
+        """try:
             load_dotenv()
         except FileNotFoundError:
             logger.critical(f"Du hast kein .env-File. Abbruch. Check README.md")
@@ -32,7 +32,7 @@ class Util:
 
         if environ.get("CONF_BASE_URL"):
             # Übernahme von CONF_BASE_URL aus dem .env-File in die globalen Konstanten.
-            global_config.config["CONF_BASE_URL"] = environ["CONF_BASE_URL"]
+            global_config.config["CONF_BASE_URL"] = environ["CONF_BASE_URL"]"""
 
     @staticmethod
     def write_pd_to_excel(file_name, sheetname, dataframe):

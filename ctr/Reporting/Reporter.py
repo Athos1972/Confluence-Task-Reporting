@@ -159,7 +159,7 @@ class TaskReporting:
         if filter_overdue:
             overdue_stmt = "AND age < 0"
 
-        stmt = f"""SELECT round(julianday(current_timestamp) - julianday(tasks.due_date), 0) as age,
+        stmt = f"""SELECT - round(julianday(current_timestamp) - julianday(tasks.due_date), 0) as age,
         tasks.due_date as date,
         tasks.due_date as count from tasks
         join conf_users on tasks.user_id = conf_users.id

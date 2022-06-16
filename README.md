@@ -127,7 +127,7 @@ automatically send reminder E-Mails
   * Added new method to crawl E-Mail-addresses as the old experimental API was deactivated during latest security patch
   * Fixed a bug in connection with previously crawled tasks where second date was removed
 * Dashboard
-  * Button "Download Selection"
+  * Button "Download Selection" downloads an XLSX-File with the current contents of the data grid to your computer
   * Changed display of age graph to include the date - not only the number of days in future/past to easier filter the
     data table for those tasks
   * New screen "Timeseries data" with a graph

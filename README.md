@@ -16,6 +16,8 @@ have more important things to do?
 
 Look no further! Help is here!
 
+![Annotated Screenshot of Version 0.0.5](media/dash_screenshot.png)
+
 # Confluence-Task-Reporting
 Reporting for Tasks (overdue, due soon, etc.) from a confluence on prem server.
 
@@ -69,8 +71,9 @@ the size of your installation.
 previous step we'll search for their tasks. We'll also scan the pages, that those tasks are included and will derive
 due-date of the tasks as well as the space name.
   * <b>TIPP</b>: For permanent crawling it might be good if you set command line parameter OUWT (Only Users With Tasks)
-  by calling <code>python user_task_crawler.py -OUWT=1</code>. This will - you guessed it - just crawl for users who
-  anyway had already some tasks.
+    by calling <code>python user_task_crawler.py -OUWT=1</code>. This will - you guessed it - just crawl for users who 
+    anyway had already some tasks. In the majority of installations you'll find 1000s of users but only a few hundred
+    with tasks.
   * <b>TIPP</b>: If you don't want to consume too much bandwidth you might consider setting 
     <code>sleep_between_crawl_tasks</code> in <code>config.toml</code> to a value around 2-5 seconds. This would also  
     seem less suspicious for people analyzing network traffic.
@@ -106,22 +109,39 @@ If there's a feature missing for your to make Confluence-Task-Reporter more usef
 GitHub. Thank you!
 
 ## Near future
-* Provide timeline data of open/overdue tasks per space, company, user, overall in dashboard and in Excel export
-* Age-distribution of tasks (as graph) depending on selections of the dashboard (in development)
-* Select not only company and space in Dashboard but also User(s)
-* Export of task list also to google sheets and CSV. Any takers?
-* Export of chose tasks from the dashboard (basically exporting the filtered contents of the data grid)
-* Export graph elements and grid as Confluence-Page (either update fixed page-id or create new page on each run)
+* Export of task list also to google sheets and CSV via script. Any takers?
+* Export graph elements and grid as Confluence-Page (either update fixed page-id or create a new page on each execution)
 
 ## Future
+* Build Windows executable and have crawlers being called from the dashboard
 * Update task contents from the app (click on a task, add a comment)
 * Reminder function via E-Mail (Chose entries from the grid in the dashboard and click on "Send Reminder") to 
 automatically send reminder E-Mails
   * That's a bit tricky as most Atlassian Customers are Corporations and there will be all kinds of E-Mail-Systems 
   to deal with. Also we need an easy option to maintain a template text. 
-  * Additional option: "Mailbomb"-Mode to send for each overdue task 1 E-Mail
+  * Additional option: "Mailbomb"-Mode to send for each overdue task 1 E-Mail to the user
   
 # Changelog
+## 0.0.5:
+* Crawler
+  * Added new method to crawl E-Mail-addresses as the old experimental API was deactivated during latest security patch
+  * Fixed a bug in connection with previously crawled tasks where second date was removed
+* Dashboard
+  * Button "Download Selection"
+  * Changed display of age graph to include the date - not only the number of days in future/past to easier filter the
+    data table for those tasks
+  * New screen "Timeseries data" with a graph
+      also updated <code>prefill_database.py</code> accordingly
+## 0.0.4:
+* Crawler
+  * Tasks from personal spaces are not considered any longer
+* Dashboard
+  * Age distribution graph showing the age of tasks (future and past)
+  * Space/Company as multiple select
+  * Checkbox "Tasks without date"
+  * Filtering enabled
+* Tests
+  * Prefill database also with tasks without date (like in real world installations)
 ## 0.0.3:
 * Statistics table added. Also report to fill it.
 * Fixed bug in user_task_crawler in -OUWT-Mode. 

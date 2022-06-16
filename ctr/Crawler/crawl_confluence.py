@@ -544,7 +544,11 @@ class CrawlConfluence:
 
     def read_userdetails_for_user(self, conf_username):
         try:
-            result = self.session.get(f"{self.confluence_url}/rest/prototype/1/user_tasks/non-system/{conf_username}")
+            # This call doesn't work any longer after a certain patch to confluence.
+            # result = self.session.get(f"{self.confluence_url}/rest/prototype/1/user_tasks/non-system/{conf_username}")
+            # Different approach:
+            result = self.session.get(f"{self.confluence_url}/display/~{conf_username}")
+            sleep(self.sleep_between_tasks)
         except ConnectionError as ex:
             logger.error(f"Connection-Error during fetching user_tasks-details of user_tasks {conf_username}: {ex}")
             return {}
@@ -553,4 +557,8 @@ class CrawlConfluence:
         #                                                     expand='details.personal, details.business')
         # Das Ergebnis diesmal als HTML. E-Mail-Addresse ist zwischen
         # <displayableEmail>Bernhard.Buhl@wienit.at</displayableEmail>
-        return {"email": result.text[result.text.find("Email>") + 6:result.text.find("</displayableEmail>")]}
+
+        text = result.text
+        trigger_text = '<span  id="email" class="field-value">'
+        start_pos = text.find(trigger_text)+len(trigger_text)
+        return {"email": text[start_pos:result.text.find("</span>",start_pos)]}

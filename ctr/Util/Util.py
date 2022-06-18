@@ -17,7 +17,7 @@ class Util:
         Reads the .env-File and writes both parameters conf_user and conf_pwd to the environment.
         We need those parameters when running Confluence crawlers.
         """
-        try:
+        """try:
             load_dotenv()
         except FileNotFoundError:
             logger.critical(f"Du hast kein .env-File. Abbruch. Check README.md")
@@ -33,7 +33,7 @@ class Util:
         if environ.get("CONF_BASE_URL"):
             # Read CONF_BASE_URL and write to global_config.
             # We don't do that for user and password for increased security (by a bit :) ).
-            global_config.config["CONF_BASE_URL"] = environ["CONF_BASE_URL"]
+            global_config.config["CONF_BASE_URL"] = environ["CONF_BASE_URL"]"""
 
     @staticmethod
     def write_pd_to_excel(file_name, sheetname, dataframe):

@@ -1,7 +1,8 @@
 import dash
 import dash_bootstrap_components as dbc
-from dash import Input, Output, callback_context, dcc
+from dash import Input, Output, callback_context, dcc, html
 from ctr.Database.connection import SqlConnector
+from ctr.Reporting.DashPages import DashPages
 from ctr.Util import logger
 from ctr.Util.Util import Util
 from ctr.Reporting.Dash import DashConstants, DashCards
@@ -14,12 +15,26 @@ Util.load_env_file()
 dash_values = DashValues(db_connection=db_connection)
 dash_constants = DashConstants(db_connection=db_connection)
 dash_cards = DashCards(dash_values=dash_values, dash_constants=dash_constants)
+dash_pages = DashPages(dash_cards=dash_cards)
+
+ACTIVE_ROUTE = None
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.config.suppress_callback_exceptions = True
 
-app.layout = dash_cards.get_layout()
+app.layout = html.Div([
+    # represents the browser address bar and doesn't render anything
+    dcc.Location(id='url', refresh=False),
 
+    # content will be rendered in this element
+    html.Div(id='page-content')
+])
+
+
+@app.callback(Output('page-content', 'children'),
+              [Input('url', 'pathname')])
+def display_page(pathname):
+    return dash_pages.get_layout(pathname)
 
 @app.callback(
     Output(component_id='dashboard', component_property='children'),
@@ -39,7 +54,7 @@ def select_options(selected_company, selected_space, radio_selector):
     :return:
     """
 
-    SELECTORS = DashCards.SELECTORS
+    selectors = DashCards.SELECTORS
     ctx = dash.callback_context
     if ctx.triggered:
         input_id = ctx.triggered[0]["prop_id"].split(".")[0]
@@ -50,10 +65,10 @@ def select_options(selected_company, selected_space, radio_selector):
             print(selected_company)
             dash_values.set_filter("company", selected_company)
         elif input_id == "radioSelectors":
-            if SELECTORS[radio_selector] == 2:
+            if selectors[radio_selector] == 2:
                 dash_values.set_filter("overdue", True)
                 dash_values.set_filter("date", False)
-            elif SELECTORS[radio_selector] == 1:
+            elif selectors[radio_selector] == 1:
                 dash_values.set_filter("overdue", False)
                 dash_values.set_filter("date", True)
             else:
@@ -72,8 +87,9 @@ def select_options(selected_company, selected_space, radio_selector):
 def process_buttons(btn):
     changed_id = [p['prop_id'] for p in callback_context.triggered][0]
 
-    # reminder_btn = 1, as not to spam. If the user_tasks chooses a space or a company, this counter is reset and therefore
-    # can send another reminder to specific space or company through active_space, active_company
+    # reminder_btn = 1, as not to spam. If the user_tasks chooses a space or a company,
+    # this counter is reset and therefore can send another reminder to specific space or
+    # company through active_space, active_company
     if 'btn_send_reminder' in changed_id and btn == 1:
         print("Sent Reminder!")
 
@@ -151,6 +167,7 @@ def process_download(n_clicks):
     #     # need to do this check.
     #     for column in ['pop', 'lifeExp', 'gdpPercap'] if column in dff
     # ]
+
 
 if __name__ == "__main__":
     app.run_server(debug=True)

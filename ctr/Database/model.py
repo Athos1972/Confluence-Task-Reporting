@@ -205,6 +205,13 @@ class Statistics(Base):
     overdue = Column(Integer, nullable=True)
     total = Column(Integer, nullable=False)
 
+    def __init__(self, space, date, user_id, overdue, total):
+        self.space = space
+        self.stat_date = date
+        self.user_id = user_id
+        self.overdue = overdue
+        self.total = total
+
 
 class CreateTableStructures:
     """

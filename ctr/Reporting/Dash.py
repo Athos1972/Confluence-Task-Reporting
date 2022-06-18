@@ -171,6 +171,23 @@ class DashCards:
         )
         return fig
 
+    def get_stats_per_space_fig(self):
+        fig = px.bar(data_frame=self.dash_values.get_task_stats_by_space(),
+                     x='date',
+                     y='count',
+                     labels ={
+                         "count" : "Count",
+                         "date" : "Date"
+                     },
+                     color="date")
+
+        fig.update_layout(
+            margin=dict(l=20, r=20, t=20, b=20),
+            showlegend=False
+        )
+
+        return fig
+
     def get_open_tasks_per_company_fig(self):
         fig = px.bar(data_frame=self.dash_values.get_task_count_by_company().sort_values(by=["count"]),
                      x='company',
@@ -227,7 +244,7 @@ class DashCards:
         df["color"] = list(map(self.SetColor, df["age"].values))
         df["date"] = df["date"].astype(str) + " (" + df["age"] + ")"
         fig = px.histogram(df, x='date', marginal="box", color="color",
-                           color_discrete_sequence=["#EF553B", "#636EFA", "#00CC96"], hover_data=["date"])
+                           color_discrete_sequence=["#EF553B", "#636EFA", "#00CC96"],)
 
         fig.update_layout(
             margin=dict(l=20, r=20, t=20, b=20),
@@ -317,7 +334,18 @@ class DashCards:
             )
             return column
 
-    def get_chart_rows(self):
+    def get_stats_chart_rows(self):
+        try:
+            structure = [
+                dbc.Col([dcc.Graph(figure=self.get_stats_per_space_fig())], width=12),
+            ]
+        except Exception as ex:
+            logger.critical(f"Exception during Structure Creation: {ex}")
+            return None
+
+        return structure
+
+    def get_tasks_chart_rows(self):
         try:
             structure = [
                 dbc.Col([html.Strong("Open tasks per space")], className="text-center mt-3 pt-3",
@@ -348,32 +376,3 @@ class DashCards:
             return None
 
         return structure
-
-    def get_layout(self):
-        selectCompany = self.get_company_selector(call_type="Dropdown")
-        selectSpace = self.get_space_selector(call_type="Dropdown")
-        checkRadio = self.get_radio_selectors()
-        checkOverdue = self.get_overdue_checkbox()
-        checkDate = self.get_date_checkbox()
-
-        layout = dbc.Container(
-            children=[
-                html.Div(id="callback_output", style={"display": "none"}),  # ignore
-                # filters
-                dbc.Row(
-                    [dbc.Col([selectSpace], width=5),
-                     dbc.Col([selectCompany], width=5),
-                     dbc.Col([
-                     #            dbc.Col([checkOverdue], width=12),
-                     #            dbc.Col([checkDate], width=12),
-                         checkRadio,
-                     ], width=2)],
-                    className="pt-3"
-                ),
-                # charts
-                dbc.Row(self.get_chart_rows(),
-                        id="dashboard"),
-            ]
-        )
-
-        return layout

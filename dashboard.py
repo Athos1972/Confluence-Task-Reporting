@@ -17,7 +17,7 @@ dash_constants = DashConstants(db_connection=db_connection)
 dash_cards = DashCards(dash_values=dash_values, dash_constants=dash_constants)
 dash_pages = DashPages(dash_cards=dash_cards)
 
-ACTIVE_ROUTE = None
+ACTIVE_ROUTE = "/"
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.config.suppress_callback_exceptions = True
@@ -34,6 +34,8 @@ app.layout = html.Div([
 @app.callback(Output('page-content', 'children'),
               [Input('url', 'pathname')])
 def display_page(pathname):
+    global ACTIVE_ROUTE
+    ACTIVE_ROUTE = pathname
     return dash_pages.get_layout(pathname)
 
 @app.callback(
@@ -53,7 +55,10 @@ def select_options(selected_company, selected_space, radio_selector):
     :param checked_date
     :return:
     """
+    global ACTIVE_ROUTE
 
+    route_to_row = {"/tasks": dash_cards.get_tasks_chart_rows,
+                    "/stats": dash_cards.get_stats_chart_rows}
     selectors = DashCards.SELECTORS
     ctx = dash.callback_context
     if ctx.triggered:
@@ -76,7 +81,7 @@ def select_options(selected_company, selected_space, radio_selector):
                 dash_values.set_filter("date", False)
 
     logger.info("Sent new result to Frontend")
-    return dash_cards.get_chart_rows()
+    return route_to_row[ACTIVE_ROUTE]()
 
 
 @app.callback(

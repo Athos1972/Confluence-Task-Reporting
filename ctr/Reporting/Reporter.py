@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 from ctr.Util import logger, global_config
 from ctr.Database.connection import SqlConnector
-from ctr.Database.model import Task, User, Page
+from ctr.Database.model import Task, User, Page, Statistics
 from sqlalchemy.sql import func
 from sqlalchemy import distinct
 from sqlite3 import ProgrammingError
@@ -176,6 +176,23 @@ class TaskReporting:
         dataframe["age"] = dataframe["age"].astype(int).astype(str)
 
         return dataframe
+
+    @catch_sql_error
+    def tasks_stats_by_space(self, filter_companies=[], filter_spaces=[]):
+        session = self.db_connection.get_session()
+        q = session.query(func.sum(Statistics.overdue), Statistics.stat_date). \
+            join(User). \
+            group_by(Statistics.stat_date)
+
+        if filter_companies:
+            q = q.filter(User.company.in_(filter_companies))
+
+        if filter_spaces:
+            q = q.filter(Statistics.space.in_(filter_spaces))
+
+        logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
+        return pd.DataFrame(columns=['count', 'date'], data=list(q))
+
 
     @catch_sql_error
     def tasks_by_age_and_space(self, filter_overdue=False, filter_date=False):

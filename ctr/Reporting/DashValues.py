@@ -46,6 +46,10 @@ class DashValues:
                                                    filter_overdue=self.filter_overdue,
                                                    filter_date=self.filter_date)
 
+    def get_task_stats_by_space(self):
+        return self.reporter.tasks_stats_by_space(filter_companies=self.filter_companies,
+                                                  filter_spaces=self.filter_spaces)
+
     def get_tasks_age(self):
         x = self.reporter.tasks_by_age_and_space(filter_overdue=self.filter_overdue,
                                                  filter_date=self.filter_date)

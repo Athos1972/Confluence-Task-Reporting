@@ -5,7 +5,7 @@ parentdir = os.path.dirname(currentdir)
 sys.path.append(parentdir)
 
 from ctr.Database.connection import SqlConnector
-from ctr.Database.model import User, Task, Page
+from ctr.Database.model import User, Task, Page, Statistics
 from datetime import date
 from faker import Faker
 import string
@@ -37,13 +37,14 @@ company_list = [
 
 for i in range(1501):
     company = company_list[randint(0,len(company_list)-1)]
-    user = User(conf_name=f"NBU{i}",
+    user = User(
+                conf_name=f"NBU{i}",
                 conf_userkey="".join(choices(string.ascii_letters, k=22)),
                 email = faker.email().replace("example", company),
                 company = company,
                 display_name=faker.name())
     session.add(user)
-    session.commit()
+session.commit()
 
 space_list = [
     "New Forms",
@@ -60,21 +61,16 @@ for i in range(1501):
     page.space = space_list[randint(0, len(space_list)-1)]
     page.page_id = randint(9000000, 11000000)
     session.add(page)
-    try:
-        session.commit()
-    except IntegrityError:
-        session.rollback()
+session.commit()
 
 
 print("Creating tasks")
 for i in range(3000):
     page_link = randint(0, 1500)
     p = session.query(User).filter(User.id == randint(0, 1500)).first()
-
     task = Task(
         global_id=i,
     )
-
     task.task_id = randint(1, 50)
     task.task_description = faker.sentence(nb_words=randint(2, 12))
     task.page_link = page_link
@@ -91,4 +87,15 @@ for i in range(3000):
         task.due_date = None
 
     session.add(task)
-    session.commit()
+session.commit()
+
+print("creating stats")
+for i in range(5001):
+    stat = Statistics(space=space_list[randint(0, len(space_list)-1)],
+                      date=date(year=randint(2020, 2024), month=randint(1, 12), day=randint(1, 26)),
+                      user_id=randint(0, 1500),
+                      overdue=randint(0, 20),
+                      total=500 + randint(0,20))
+    session.add(stat)
+
+session.commit()

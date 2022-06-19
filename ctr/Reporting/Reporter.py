@@ -180,7 +180,7 @@ class TaskReporting:
     @catch_sql_error
     def tasks_stats_by_space(self, filter_companies=[], filter_spaces=[]):
         session = self.db_connection.get_session()
-        q = session.query(func.sum(Statistics.overdue), Statistics.stat_date). \
+        q = session.query(func.sum(Statistics.overdue), func.sum(Statistics.total), Statistics.stat_date). \
             join(User). \
             group_by(Statistics.stat_date)
 
@@ -191,7 +191,7 @@ class TaskReporting:
             q = q.filter(Statistics.space.in_(filter_spaces))
 
         logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
-        return pd.DataFrame(columns=['count', 'date'], data=list(q))
+        return pd.DataFrame(columns=['overdue', 'total', 'date'], data=list(q))
 
 
     @catch_sql_error

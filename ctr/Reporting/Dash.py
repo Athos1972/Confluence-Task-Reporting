@@ -172,6 +172,8 @@ class DashCards:
         return fig
 
     def get_stats_per_space_fig(self):
+        df = self.dash_values.get_task_stats_by_space()
+        """
         fig = px.bar(data_frame=self.dash_values.get_task_stats_by_space(),
                      x='date',
                      y='count',
@@ -179,11 +181,17 @@ class DashCards:
                          "count" : "Count",
                          "date" : "Date"
                      },
-                     color="date")
+                     color="date")"""
+
+        fig = go.Figure(data=[
+            go.Bar(name='Overdue', x=df["date"], y=df["overdue"]),
+            go.Bar(name='Total', x=df["date"], y=df["total"] - df["overdue"])
+        ])
 
         fig.update_layout(
             margin=dict(l=20, r=20, t=20, b=20),
-            showlegend=False
+            showlegend=False,
+            barmode="stack"
         )
 
         return fig

@@ -184,8 +184,10 @@ class DashCards:
                      color="date")"""
 
         fig = go.Figure(data=[
-            go.Bar(name='Overdue', x=df["date"], y=df["overdue"]),
-            go.Bar(name='Total', x=df["date"], y=df["total"] - df["overdue"])
+            go.Bar(name='Overdue', x=df["date"], y=df["overdue"],
+                   marker=dict(color=["#EF553B" for row in df["total"].values])),
+            go.Bar(name='Total', x=df["date"], y=df["total"] - df["overdue"],
+                   marker=dict(color=["#636EFA" for row in df["total"].values])),
         ])
 
         fig.update_layout(

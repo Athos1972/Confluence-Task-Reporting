@@ -100,7 +100,7 @@ class DashCards:
             selector = dbc.InputGroup(
                 [dbc.InputGroupText("Select space(s)", className="w-100"),
                  dcc.Dropdown(self.dash_constants.get_spaces()[1:], id="selectSpace", multi=True,
-                              style={"flex-grow": "1"})],
+                              style={"flex-grow": "1"}, value=self.dash_values.filter_spaces)],
                 className="mb-3 d-flex w-100")
             return selector
         elif call_type == "Select":
@@ -117,7 +117,7 @@ class DashCards:
             selector = dbc.InputGroup(
                 [dbc.InputGroupText("Select company(ies)", className="w-100"),
                  dcc.Dropdown(self.dash_constants.get_companies()[1:], id="selectCompany", multi=True,
-                              style={'flex-grow': '1'})],
+                              style={'flex-grow': '1'}, value=self.dash_values.filter_companies)],
                 className="mb-3 d-flex w-100")
         elif call_type == "Select":
             selector = dbc.InputGroup(

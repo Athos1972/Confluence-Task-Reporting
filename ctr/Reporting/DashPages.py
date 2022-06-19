@@ -13,7 +13,7 @@ class DashPages:
         self.dash_cards = dash_cards
 
     def get_layout(self, active_page):
-        pages = {"/": self.get_index_layout,
+        pages = {"/": self.get_tasks_layout,
                  "/tasks": self.get_tasks_layout,
                  "/stats": self.get_stats_layout}
 

@@ -1,6 +1,6 @@
 
 # filename_database = "sqlite:///prod.db?check_same_thread=False"
-filename_database = "sqlite:///testdatabase.db?check_same_thread=False"
+filename_database = "sqlite:///prod.db?check_same_thread=False"
 
 # Full path to where the logfiles shall be stored or empty
 log_dir = "logs/"

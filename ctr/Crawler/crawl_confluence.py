@@ -138,6 +138,15 @@ class TaskWrapper(Wrapper):
         return updated_task.internal_id
 
     def __get_existing_task(self):
+        """
+        Tries to find existing task in database. First via uniqe global_id.
+
+        If that doesn't work we try for page_id and task_id within this page.
+
+        Then we give up and return nothing
+
+        :return: Either found task-instance or None
+        """
         found_task = None
         if self.global_id:
             # Try finding the existing task record via global_id.
@@ -176,6 +185,11 @@ class TaskWrapper(Wrapper):
             return new_task
 
     def __update_all_fields_in_task(self, new_task):
+        """
+        Take over values from wrapper-instance into new_task-Instance.
+        :param new_task:
+        :return:
+        """
         # These attributes may have changed since last crawl:
         new_task.reminder_date = self._convert_confluence_dateformat_to_date(self.reminder_date)
         new_task.is_done = self.is_done
@@ -359,9 +373,6 @@ class CrawlConfluence:
         sleep(self.sleep_between_tasks)
         return self.session.get(f'{self.confluence_url}/{page_name}')
 
-    def get_confluence_page_via_api(self, page_id):
-        return self.confluence_instance.get_page_by_id(page_id=page_id, expand="body.storage")
-
     def crawl_users(self, limit=10, max_entries=100, start=0):
         """
         Get a List of Users from Confluence. Then read additional details for each user_tasks.
@@ -417,9 +428,9 @@ class CrawlConfluence:
 
     def crawl_tasks_for_user(self, conf_user_name, limit=10, max_entries=100, start=0):
         """
-        Holt via Confluence-API die Tasks zu einem User.
+        Grabs the tasks for a user via Confluence-API.
 
-        # Unesaped schaut das wesentlich netter aus:
+        # This is how it looks without URL-Escape:
         # /rest/inlinetasks/1/my-task-report/?pageSize=500&pageIndex=0
         # &reportParameters=
         # {"columns":
@@ -430,16 +441,16 @@ class CrawlConfluence:
         #   "sortColumn":"duedate",
         #   "reverseSort":false
         # }
-        # Escaped sieht es so aus:
+        # Escaped like this:
         # /rest/inlinetasks/1/my-task-report/?pageSize=500&pageIndex=0&reportParameters=%7B%22
         # columns%22%3A%5B%22description%22%2C%22duedate%22%2C%22location%22%5D%2C%22assignees%22%3A%5B%22
         # netifu%22%5D%2C%22creators%22%3A%5Bnull%5D%2C%22status%22%3A%22incomplete%22%2C%22
         # sortColumn%22%3A%22duedate%22%2C%22reverseSort%22%3Afalse%7D
 
         :param conf_user_name:
-        :param limit: Wie viele Ergebnisse je Call wollen wir abfragen?
-        :param max_entries: Wie viele Ergebnisse gesamt?
-        :param start: Ab welcher Zeile soll die Ausgabe starten
+        :param limit: How many results do we want to have per page?
+        :param max_entries: how many results in total?
+        :param start: from which result line to start (usuall 0 - only relevant for testing)
         :return:
         """
 
@@ -542,7 +553,12 @@ class CrawlConfluence:
 
         return results_found
 
-    def read_userdetails_for_user(self, conf_username):
+    def read_userdetails_for_user(self, conf_username) -> dict:
+        """
+        Find additional user parameters from additional call to Confluence
+        :param conf_username: Confluence User name
+        :return: Dictionary of additional attributes for this user
+        """
         try:
             # This call doesn't work any longer after a certain patch to confluence.
             # result = self.session.get(f"{self.confluence_url}/rest/prototype/1/user_tasks/non-system/{conf_username}")
@@ -552,13 +568,13 @@ class CrawlConfluence:
         except ConnectionError as ex:
             logger.error(f"Connection-Error during fetching user_tasks-details of user_tasks {conf_username}: {ex}")
             return {}
-        # Dieser Aufruf funktioniert noch nicht in der Confluence-Server-Version
+        # This call should work but doesn't.
         # result = self.instance.get_user_details_by_username(username=conf_username,
         #                                                     expand='details.personal, details.business')
-        # Das Ergebnis diesmal als HTML. E-Mail-Addresse ist zwischen
-        # <displayableEmail>Bernhard.Buhl@wienit.at</displayableEmail>
 
         text = result.text
+        # In the HTML-Response we search for this span. Between the <span> and </span> we'll find the E-Mail-Address
+        # (if maintained)
         trigger_text = '<span  id="email" class="field-value">'
         start_pos = text.find(trigger_text)+len(trigger_text)
         return {"email": text[start_pos:result.text.find("</span>",start_pos)]}

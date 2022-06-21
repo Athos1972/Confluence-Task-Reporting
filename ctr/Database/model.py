@@ -12,11 +12,10 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from datetime import datetime, date as datetimedate
 from ctr.Util import logger
 
-
 Base = declarative_base()
 
 
-def _extract_company_from_email(email:str):
+def _extract_company_from_email(email: str):
     """
     Extracts Company-Name from E-Mail. If length of company-Name is up to 4 digits company name is rendered in upper-
     case, e.g. Ibm looks weird, IBM looks better. Otherwise first character of company-name is translated to upper case
@@ -29,11 +28,11 @@ def _extract_company_from_email(email:str):
         return "unknown"
 
     # "franzi@fritzi.com"
-    company = email.split("@")[1]   #fritzi.com
-    company = company.split(".")[0]  #fritzi
+    company = email.split("@")[1]  # fritzi.com
+    company = company.split(".")[0]  # fritzi
 
     if len(company) <= 4:
-        return company.upper()       #Fritzi
+        return company.upper()  # Fritzi
     return company.title()
 
 
@@ -86,20 +85,20 @@ class Task(Base):
     __tablename__ = "tasks"
 
     internal_id = Column(Integer, primary_key=True, autoincrement=True)
-    global_id = Column(String(30), nullable=False)    # GlobalID from Confluence. This is a bit weird as it's not
-                                                      # supplied in tasks in pages but only in taskview-API.
-    task_id = Column(Integer, nullable=False)         # TaskId on the current page
-    reminder_date = Column(Date, nullable=True)       # The first date that can be found in a task
-    second_date = Column(Date, nullable=True)         # The second date that can be found in a task
-    due_date = Column(Date, nullable=True)            # Calculated due_date
-    is_done = Column(Boolean, nullable=False)         # Task incomplete or completed
+    global_id = Column(String(30), nullable=False)  # GlobalID from Confluence. This is a bit weird as it's not
+    # supplied in tasks in pages but only in taskview-API.
+    task_id = Column(Integer, nullable=False)  # TaskId on the current page
+    reminder_date = Column(Date, nullable=True)  # The first date that can be found in a task
+    second_date = Column(Date, nullable=True)  # The second date that can be found in a task
+    due_date = Column(Date, nullable=True)  # Calculated due_date
+    is_done = Column(Boolean, nullable=False)  # Task incomplete or completed
     first_seen = Column(DateTime(), default=func.now())
     last_crawled = Column(DateTime(), onupdate=func.now(), nullable=True, index=True)
     # The HTML Task Description from the WIKI-PAge
     task_description = Column(String(), nullable=True)
 
-    # Link to user_tasks, who is the owner of the task. Confluence considers only the first mentioned user_tasks as assignee.
-    # All other names are just as information
+    # Link to user_tasks, who is the owner of the task. Confluence considers only the first mentioned user_tasks
+    # as assignee. All other names are just as information
     user_id = Column(Integer, ForeignKey("conf_users.id"), nullable=True)
     user = relationship("User", backref="tasks")
 
@@ -127,7 +126,7 @@ class Task(Base):
 
 
 @event.listens_for(Task.second_date, "set")
-def update_due_date_from_second_date(target:Task, value, oldvalue, initiator):
+def update_due_date_from_second_date(target: Task, value, oldvalue, initiator):
     """
     If second date (=value) is lower than reminder date then this is the due_date.
     If second date (=value) is not filled set the due_date to reminder_date (=1st date)
@@ -154,7 +153,7 @@ def update_due_date_from_second_date(target:Task, value, oldvalue, initiator):
 
 
 @event.listens_for(Task.reminder_date, "set")
-def update_due_date_from_reminder_date(target:Task, value, oldvalue, initiator):
+def update_due_date_from_reminder_date(target: Task, value, oldvalue, initiator):
     """
     Due date is either the second date (if that one is higher than the reminder date) or the reminder date.
     :param target: the Task-Instance
@@ -177,8 +176,8 @@ class Page(Base):
     __tablename__ = "pages"
 
     internal_id = Column(Integer, primary_key=True, autoincrement=True)
-    page_link = Column(String(100), nullable=False)        # Link to the page
-    page_name = Column(String(200), nullable=False)        # Name/Title of the page
+    page_link = Column(String(100), nullable=False)  # Link to the page
+    page_name = Column(String(200), nullable=False)  # Name/Title of the page
     page_id = Column(Integer, nullable=True, unique=True)  # The unique Confluence PageID
     space = Column(String(50), nullable=True, index=True)  # True because Space is not known during initial creation.
     last_crawled = Column(DateTime, onupdate=func.now(), nullable=False, index=True)
@@ -218,6 +217,7 @@ class CreateTableStructures:
     Create the Tables in the database, if not already there.
     Existing tables are not updated. New Tables are created.
     """
+
     def __init__(self, engine):
         self.engine = engine
 

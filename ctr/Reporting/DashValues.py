@@ -22,15 +22,19 @@ class DashValues:
         if filter_type == "overdue":
             self.filter_overdue = filter_value
             return
+
         if filter_type == "date":
             self.filter_date = filter_value
             return
+
         if filter_type == "space":
             self.filter_spaces = filter_value
             return
+            
         if filter_type == "company":
             self.filter_companies = filter_value
             return
+
         logger.critical(f"called with filter_type = {filter_type}. Not implemented!")
 
     def get_max_pages(self):
@@ -39,11 +43,13 @@ class DashValues:
     def get_open_tasks_per_space(self):
         return self.reporter.task_count_by_space(filter_spaces=self.filter_spaces,
                                                  filter_overdue=self.filter_overdue,
-                                                 filter_date=self.filter_date)
+                                                 filter_date=self.filter_date,
+                                                 filter_companies=self.filter_companies)
 
     def get_task_count_by_company(self):
         return self.reporter.task_count_by_company(filter_companies=self.filter_companies,
                                                    filter_overdue=self.filter_overdue,
+                                                   filter_spaces=self.filter_spaces,
                                                    filter_date=self.filter_date)
 
     def get_task_stats_by_space(self):

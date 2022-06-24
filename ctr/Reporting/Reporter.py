@@ -67,28 +67,29 @@ class TaskReporting:
         self.db_connection = db_connection
 
     @catch_sql_error
-    def task_count_by_space(self, filter_spaces=None, filter_overdue=False, filter_date=False):
+    def task_count_by_space(self, filter_spaces=None, filter_overdue=False, filter_date=False, filter_companies=None):
         session = self.db_connection.get_session()
         if not filter_overdue:
             date_to_filter = datetime.strptime("2199-12-31", "%Y-%m-%d")
         else:
             date_to_filter = datetime.now()
-        if not filter_spaces or len("".join(filter_spaces)) == 0:
-            q = session.query(func.count(Task.internal_id), Page.space). \
-                join(Page). \
-                filter(Task.is_done == False). \
-                group_by(Page.space)
-        else:
-            q = session.query(func.count(Task.internal_id), Page.space). \
-                join(Page). \
-                filter(Task.is_done == False,
-                       Page.space.in_(filter_spaces)). \
-                group_by(Page.space)
+
+        q = session.query(func.count(Task.internal_id), Page.space). \
+            join(Page, User). \
+            filter(Task.is_done == False). \
+            group_by(Page.space)
+
+        if filter_spaces:
+            q = q.filter(Page.space.in_(filter_spaces))
+
+        if filter_companies:
+            q = q.filter(User.company.in_(filter_companies))
 
         if filter_date:
             q = q.filter(Task.due_date.is_(None))
         else:
             q = q.filter(Task.reminder_date < date_to_filter)
+
 
         logger.debug(f"returned {q.count()} entries. Statement was: {str(q)}")
         result = pd.DataFrame(columns=['count', 'space'], data=list(q))
@@ -113,24 +114,23 @@ class TaskReporting:
         logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
         return q
 
-    def task_count_by_company(self, filter_companies=None, filter_overdue=False, filter_date=False):
+    def task_count_by_company(self, filter_companies=None, filter_overdue=False, filter_date=False, filter_spaces=None):
         session = self.db_connection.get_session()
         if not filter_overdue:
             date_to_filter = datetime.strptime("2199-12-31", "%Y-%m-%d")
         else:
             date_to_filter = datetime.now()
 
-        if not filter_companies or len("".join(filter_companies)) == 0:
-            q = session.query(func.count(Task.internal_id), User.company). \
-                join(Task). \
+        q = session.query(func.count(Task.internal_id), User.company). \
+                join(Task, Page). \
                 filter(Task.is_done == False). \
                 group_by(User.company)
-        else:
-            q = session.query(func.count(Task.internal_id), User.company). \
-                join(Task). \
-                filter(Task.is_done == False,
-                       User.company.in_(filter_companies)). \
-                group_by(User.company)
+
+        if filter_spaces:
+            q = q.filter(Page.space.in_(filter_spaces))
+
+        if filter_companies:
+            q = q.filter(User.company.in_(filter_companies))
 
         if filter_date:
             q = q.filter(Task.due_date.is_(None))
@@ -193,6 +193,12 @@ class TaskReporting:
         logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
         return pd.DataFrame(columns=['overdue', 'total', 'date'], data=list(q))
 
+# """
+# SELECT conf_users.display_name as name, Count(tasks.internal_id) as task_count,
+# Count(tasks.due_date < CURRENT_TIMESTAMP and not tasks.is_done) as overdue_count
+# from tasks join conf_users  on conf_users.id = tasks.user_id
+# group by conf_users.id
+# """
 
     @catch_sql_error
     def tasks_by_age_and_space(self, filter_overdue=False, filter_date=False):

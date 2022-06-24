@@ -137,15 +137,22 @@ class DashCards:
 
         return element
 
-    SELECTORS = {"No Filter" : 0, "W/ due date" : 1, "Only overdue" : 2}
+    SELECTORS = {"W/ due date" : 1, "Only overdue" : 2, "With due date" : 3}
 
-    @staticmethod
-    def get_radio_selectors():
-        element = \
-            dcc.RadioItems([key for key in DashCards.SELECTORS.keys()], "No Filter", id="radioSelectors",
-                             labelStyle={'display': 'block'}, inputStyle={"margin-right": "7px"})
+    def get_radio_selectors(self):
+        # element = \
+        #     dcc.RadioItems([key for key in DashCards.SELECTORS.keys()], "No Filter", id="radioSelectors",
+        #                      labelStyle={'display': 'block'}, inputStyle={"margin-right": "7px"})
 
-        return element
+        # return element
+
+        selector = dbc.InputGroup(
+                [dbc.InputGroupText("Filters", className="w-100"),
+                 dcc.Dropdown([key for key in DashCards.SELECTORS.keys()], id="radioSelectors", multi=False,
+                              style={"flex-grow": "1"}, value=self.dash_values.filter_overdue)],
+                className="mb-3 d-flex w-100")
+
+        return selector
 
     @staticmethod
     def get_date_checkbox():

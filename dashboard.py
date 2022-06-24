@@ -17,7 +17,7 @@ dash_constants = DashConstants(db_connection=db_connection)
 dash_cards = DashCards(dash_values=dash_values, dash_constants=dash_constants)
 dash_pages = DashPages(dash_cards=dash_cards)
 
-ACTIVE_ROUTE = "/tasks"
+ACTIVE_ROUTE = "/"
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.config.suppress_callback_exceptions = True
@@ -57,7 +57,8 @@ def select_options(selected_company, selected_space, radio_selector):
     """
     global ACTIVE_ROUTE
 
-    route_to_row = {"/tasks": dash_cards.get_tasks_chart_rows,
+    route_to_row = {"/" : dash_cards.get_tasks_chart_rows,
+                "/tasks": dash_cards.get_tasks_chart_rows,
                     "/stats": dash_cards.get_stats_chart_rows}
     selectors = DashCards.SELECTORS
     ctx = dash.callback_context

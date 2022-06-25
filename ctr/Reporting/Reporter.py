@@ -67,7 +67,7 @@ class TaskReporting:
         self.db_connection = db_connection
 
     @catch_sql_error
-    def task_count_by_space(self, filter_spaces=None, filter_overdue=False, filter_date=False, filter_companies=None):
+    def task_count_by_space(self, filter_spaces=None, filter_overdue=False, filter_date=0, filter_companies=None):
         session = self.db_connection.get_session()
         if not filter_overdue:
             date_to_filter = datetime.strptime("2199-12-31", "%Y-%m-%d")
@@ -85,9 +85,13 @@ class TaskReporting:
         if filter_companies:
             q = q.filter(User.company.in_(filter_companies))
 
-        if filter_date:
+        if filter_date == 1:
             q = q.filter(Task.due_date.is_(None))
-        else:
+
+        if filter_date == 2:
+            q = q.filter(Task.due_date.is_not(None))
+
+        if filter_overdue:
             q = q.filter(Task.reminder_date < date_to_filter)
 
 
@@ -114,7 +118,7 @@ class TaskReporting:
         logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
         return q
 
-    def task_count_by_company(self, filter_companies=None, filter_overdue=False, filter_date=False, filter_spaces=None):
+    def task_count_by_company(self, filter_companies=None, filter_overdue=False, filter_date=0, filter_spaces=None):
         session = self.db_connection.get_session()
         if not filter_overdue:
             date_to_filter = datetime.strptime("2199-12-31", "%Y-%m-%d")
@@ -132,9 +136,13 @@ class TaskReporting:
         if filter_companies:
             q = q.filter(User.company.in_(filter_companies))
 
-        if filter_date:
+        if filter_date == 1:
             q = q.filter(Task.due_date.is_(None))
-        else:
+
+        if filter_date == 2:
+            q = q.filter(Task.due_date.is_not(None))
+
+        if filter_overdue:
             q = q.filter(Task.reminder_date < date_to_filter)
 
         logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
@@ -193,18 +201,46 @@ class TaskReporting:
         logger.debug(f"returned {q.count()} entries. Statement was {str(q)}")
         return pd.DataFrame(columns=['overdue', 'total', 'date'], data=list(q))
 
-# """
-# SELECT conf_users.display_name as name, Count(tasks.internal_id) as task_count,
-# Count(tasks.due_date < CURRENT_TIMESTAMP and not tasks.is_done) as overdue_count
-# from tasks join conf_users  on conf_users.id = tasks.user_id
-# group by conf_users.id
-# """
+    @catch_sql_error
+    def tasks_stats_by_user(self, filter_companies=[], filter_spaces=[]):
+        session = self.db_connection.get_session()
+
+        company_stmt = ""
+        space_stmt = ""
+        where_stmt = ""
+
+        if filter_companies:
+            where_stmt = "WHERE"
+            company_stmt = "conf_users.company IN (" + ', '.join('"{}"'.format(t) for t in filter_companies) + ")"
+
+        if filter_spaces:
+            space_stmt = "AND pages.space IN (" + ', '.join('"{}"'.format(t) for t in filter_spaces) + ")"
+            if where_stmt == "":
+                where_stmt = "WHERE"
+                space_stmt = "pages.space IN (" + ', '.join('"{}"'.format(t) for t in filter_spaces) + ")"
+
+        stmt =f"""
+            SELECT conf_users.display_name as name, Count(tasks.internal_id) as task_count,
+            Count(tasks.due_date < CURRENT_TIMESTAMP and not tasks.is_done) as overdue_count
+            from tasks join conf_users on conf_users.id = tasks.user_id
+            JOIN pages ON pages.internal_id = tasks.page_link
+            {where_stmt} {company_stmt} {space_stmt}
+            group by conf_users.id
+            """
+
+        q = session.execute(stmt)
+
+        result = list(q)
+        logger.debug(f"returned {len(result)} entries. Statement was {stmt}")
+        dataframe = pd.DataFrame(columns=['user', 'total', 'overdue'], data=result)
+        return dataframe
 
     @catch_sql_error
-    def tasks_by_age_and_space(self, filter_overdue=False, filter_date=False):
+    def tasks_by_age_and_space(self, filter_overdue=False, filter_date=0):
         ages = []
         spaces = []
-        if not filter_date:
+
+        if filter_date in [0, 2]:
             if not filter_overdue:
                 stmt = """select age, page_space from 
                         (SELECT round(julianday(CURRENT_TIMESTAMP) - julianday(tasks.reminder_date),0) AS age, 

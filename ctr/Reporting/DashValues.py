@@ -24,6 +24,9 @@ class DashValues:
             return
 
         if filter_type == "date":
+            # 0 : No Filter
+            # 1 : With Due Date
+            # 2 : With No Date
             self.filter_date = filter_value
             return
 
@@ -54,6 +57,10 @@ class DashValues:
 
     def get_task_stats_by_space(self):
         return self.reporter.tasks_stats_by_space(filter_companies=self.filter_companies,
+                                                  filter_spaces=self.filter_spaces)
+
+    def get_task_stats_by_user(self):
+        return self.reporter.tasks_stats_by_user(filter_companies=self.filter_companies,
                                                   filter_spaces=self.filter_spaces)
 
     def get_tasks_age(self):
@@ -121,8 +128,11 @@ class DashValues:
         if self.filter_overdue:
             grid_data = grid_data[grid_data["Due"] < date.today()]
 
-        if self.filter_date:
+        if self.filter_date == 1:
             grid_data = grid_data[grid_data["Due"].isna()]
+
+        if self.filter_date == 2:
+            grid_data = grid_data[grid_data["Due"].notna()]
 
         self.max_pages = len(grid_data) // 25
 

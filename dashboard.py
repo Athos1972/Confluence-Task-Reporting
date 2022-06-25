@@ -68,18 +68,21 @@ def select_options(selected_company, selected_space, radio_selector):
         if input_id == "selectSpace":
             dash_values.set_filter("space", selected_space)
         elif input_id == "selectCompany":
-            print(selected_company)
             dash_values.set_filter("company", selected_company)
         elif input_id == "radioSelectors":
-            if selectors[radio_selector] == 2:
-                dash_values.set_filter("overdue", True)
-                dash_values.set_filter("date", False)
-            elif selectors[radio_selector] == 1:
-                dash_values.set_filter("overdue", False)
-                dash_values.set_filter("date", True)
+            if radio_selector:
+                if selectors[radio_selector] == 2:
+                    dash_values.set_filter("overdue", True)
+                    dash_values.set_filter("date", 2)
+                elif selectors[radio_selector] == 1:
+                    dash_values.set_filter("overdue", False)
+                    dash_values.set_filter("date", 1)
+                elif selectors[radio_selector] == 3:
+                    dash_values.set_filter("overdue", False)
+                    dash_values.set_filter("date", 2)
             else:
                 dash_values.set_filter("overdue", False)
-                dash_values.set_filter("date", False)
+                dash_values.set_filter("date", 0)
 
     logger.info("Sent new result to Frontend")
     return route_to_row[ACTIVE_ROUTE]()

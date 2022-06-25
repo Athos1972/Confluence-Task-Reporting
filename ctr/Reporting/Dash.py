@@ -205,6 +205,33 @@ class DashCards:
 
         return fig
 
+    def get_stats_per_user_fig(self):
+        df = self.dash_values.get_task_stats_by_user()
+        """
+        fig = px.bar(data_frame=self.dash_values.get_task_stats_by_space(),
+                     x='user',
+                     y='count',
+                     labels ={
+                         "count" : "Count",
+                         "user" : "User"
+                     },
+                     color="date")"""
+
+        fig = go.Figure(data=[
+            go.Bar(name='Overdue', x=df["user"], y=df["overdue"],
+                   marker=dict(color=["#EF553B" for row in df["total"].values])),
+            go.Bar(name='Total', x=df["user"], y=df["total"] - df["overdue"],
+                   marker=dict(color=["#636EFA" for row in df["total"].values])),
+        ])
+
+        fig.update_layout(
+            margin=dict(l=20, r=20, t=20, b=20),
+            showlegend=False,
+            barmode="stack"
+        )
+
+        return fig
+
     def get_open_tasks_per_company_fig(self):
         fig = px.bar(data_frame=self.dash_values.get_task_count_by_company().sort_values(by=["count"]),
                      x='company',
@@ -354,7 +381,10 @@ class DashCards:
     def get_stats_chart_rows(self):
         try:
             structure = [
+                dbc.Col([html.Strong("Total tasks and overdue tasks per day")], className="text-center mt-3 pt-3", width=12),
                 dbc.Col([dcc.Graph(figure=self.get_stats_per_space_fig())], width=12),
+                dbc.Col([html.Strong("Tasks stats per user")], className="text-center mt-3 pt-3", width=12),
+                dbc.Col([dcc.Graph(figure=self.get_stats_per_user_fig())], width=12),
             ]
         except Exception as ex:
             logger.critical(f"Exception during Structure Creation: {ex}")

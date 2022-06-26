@@ -242,7 +242,7 @@ class TaskReporting:
 
         stmt =f"""
             SELECT conf_users.display_name as name, Count(tasks.internal_id) as task_count,
-            Count(tasks.due_date < CURRENT_TIMESTAMP and not tasks.is_done) as overdue_count
+            Count(tasks.due_date < CURRENT_TIMESTAMP and tasks.is_done == 0) as overdue_count
             from tasks join conf_users on conf_users.id = tasks.user_id
             JOIN pages ON pages.internal_id = tasks.page_link
             {where_stmt} {company_stmt} {space_stmt} {overdue_stmt} {date_stmt}

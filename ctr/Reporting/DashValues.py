@@ -61,7 +61,9 @@ class DashValues:
 
     def get_task_stats_by_user(self):
         return self.reporter.tasks_stats_by_user(filter_companies=self.filter_companies,
-                                                  filter_spaces=self.filter_spaces)
+                                                  filter_spaces=self.filter_spaces,
+                                                  filter_overdue=self.filter_overdue,
+                                                  filter_date=self.filter_date)
 
     def get_tasks_age(self):
         x = self.reporter.tasks_by_age_and_space(filter_overdue=self.filter_overdue,

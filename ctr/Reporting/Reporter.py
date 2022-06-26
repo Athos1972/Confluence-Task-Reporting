@@ -202,12 +202,14 @@ class TaskReporting:
         return pd.DataFrame(columns=['overdue', 'total', 'date'], data=list(q))
 
     @catch_sql_error
-    def tasks_stats_by_user(self, filter_companies=[], filter_spaces=[]):
+    def tasks_stats_by_user(self, filter_companies=[], filter_spaces=[], filter_overdue=False, filter_date=0):
         session = self.db_connection.get_session()
 
         company_stmt = ""
         space_stmt = ""
         where_stmt = ""
+        overdue_stmt = ""
+        date_stmt = ""
 
         if filter_companies:
             where_stmt = "WHERE"
@@ -219,12 +221,31 @@ class TaskReporting:
                 where_stmt = "WHERE"
                 space_stmt = "pages.space IN (" + ', '.join('"{}"'.format(t) for t in filter_spaces) + ")"
 
+        if filter_overdue:
+            overdue_stmt = "AND tasks.is_done = 0 AND tasks.reminder_date < DATE()"
+            if where_stmt == "":
+                where_stmt = "WHERE"
+                overdue_stmt = "tasks.is_done = 0 AND tasks.reminder_date < DATE()"
+
+        if filter_date == 2:
+            date_stmt = "AND tasks.due_date IS NOT NULL"
+            if where_stmt == "":
+                where_stmt = "WHERE"
+                date_stmt = "tasks.due_date IS NOT NULL"
+
+        if filter_date == 1:
+            date_stmt = "AND tasks.due_date IS NULL"
+            if where_stmt == "":
+                where_stmt = "WHERE"
+                date_stmt = "tasks.due_date IS NULL"
+        
+
         stmt =f"""
             SELECT conf_users.display_name as name, Count(tasks.internal_id) as task_count,
             Count(tasks.due_date < CURRENT_TIMESTAMP and not tasks.is_done) as overdue_count
             from tasks join conf_users on conf_users.id = tasks.user_id
             JOIN pages ON pages.internal_id = tasks.page_link
-            {where_stmt} {company_stmt} {space_stmt}
+            {where_stmt} {company_stmt} {space_stmt} {overdue_stmt} {date_stmt}
             group by conf_users.id
             """
 

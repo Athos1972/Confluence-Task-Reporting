@@ -218,10 +218,10 @@ class DashCards:
                      color="date")"""
 
         fig = go.Figure(data=[
-            go.Bar(name='Overdue', x=df["user"], y=df["overdue"],
-                   marker=dict(color=["#EF553B" for row in df["total"].values])),
             go.Bar(name='Total', x=df["user"], y=df["total"] - df["overdue"],
                    marker=dict(color=["#636EFA" for row in df["total"].values])),
+            go.Bar(name='Overdue', x=df["user"], y=df["overdue"],
+                   marker=dict(color=["#EF553B" for row in df["total"].values])),
         ])
 
         fig.update_layout(
@@ -383,8 +383,6 @@ class DashCards:
             structure = [
                 dbc.Col([html.Strong("Total tasks and overdue tasks per day")], className="text-center mt-3 pt-3", width=12),
                 dbc.Col([dcc.Graph(figure=self.get_stats_per_space_fig())], width=12),
-                dbc.Col([html.Strong("Tasks stats per user")], className="text-center mt-3 pt-3", width=12),
-                dbc.Col([dcc.Graph(figure=self.get_stats_per_user_fig())], width=12),
             ]
         except Exception as ex:
             logger.critical(f"Exception during Structure Creation: {ex}")
@@ -403,6 +401,8 @@ class DashCards:
                 dbc.Col([dcc.Graph(figure=self.get_open_tasks_per_company_fig())], width=6),
                 dbc.Col([html.Strong("Tasks distribution by age")], className="text-center mt-3 pt-3", width=12),
                 dbc.Col([dcc.Graph(figure=self.get_task_count_by_age_fig())], width=12),
+                dbc.Col([html.Strong("Total tasks and overdue tasks per user")], className="text-center mt-3 pt-3", width=12),
+                dbc.Col([dcc.Graph(figure=self.get_stats_per_user_fig())], width=12),
                 dbc.Col([html.Div(html.Center(""))], width=12),
                 dbc.Col([self.get_space_overdue_task_card(self.dash_values.get_open_tasks_per_space())], width=3),
                 dbc.Col([self.get_company_overdue_task_card(self.dash_values.get_task_count_by_company())], width=3),

@@ -7,7 +7,6 @@ import dash_bootstrap_components as dbc
 from dash import html, dcc, dash_table
 import plotly.express as px
 import plotly.graph_objects as go
-import pandas as pd
 
 
 class DashConstants:
@@ -137,7 +136,7 @@ class DashCards:
 
         return element
 
-    SELECTORS = {"W/ due date" : 1, "Only overdue" : 2, "With due date" : 3}
+    SELECTORS = {"w/o due date": 1, "Only overdue": 2, "With due date": 3}
 
     def get_radio_selectors(self):
         # element = \

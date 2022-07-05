@@ -51,7 +51,7 @@ class UserWrapper(Wrapper):
         super().__init__(db_connection=db_connection)
         self.confluence_name = confluence_name
         self.confluence_userkey = confluence_userkey
-        self.email = email or "unknown"
+        self.email = email
         self.display_name = display_name
 
     def update_user_in_database(self):
@@ -63,7 +63,7 @@ class UserWrapper(Wrapper):
         if found_user.count() > 0:
             # User exists already in Database.
             found_user[0].last_crawled = datetime.now()
-            found_user[0].email = self.email
+            found_user[0].email = self.email or "unknown"
             found_user[0].display_name = self.display_name
             found_user[0].conf_userkey = self.confluence_userkey
             logger.debug(f"user_tasks {found_user[0].conf_name} existed. Updated last_crawled-Timestamp, E-Mail and Name")
@@ -563,7 +563,8 @@ class CrawlConfluence:
             # This call doesn't work any longer after a certain patch to confluence.
             # result = self.session.get(f"{self.confluence_url}/rest/prototype/1/user_tasks/non-system/{conf_username}")
             # Different approach:
-            result = self.session.get(f"{self.confluence_url}/display/~{conf_username}")
+            link = f"{self.confluence_url}/display/~{conf_username}"
+            result = self.session.get(link)
             sleep(self.sleep_between_tasks)
         except ConnectionError as ex:
             logger.error(f"Connection-Error during fetching user_tasks-details of user_tasks {conf_username}: {ex}")
@@ -577,4 +578,7 @@ class CrawlConfluence:
         # (if maintained)
         trigger_text = '<span  id="email" class="field-value">'
         start_pos = text.find(trigger_text)+len(trigger_text)
-        return {"email": text[start_pos:result.text.find("</span>",start_pos)]}
+        email = text[start_pos:result.text.find("</span>",start_pos)]
+        if not email:
+            logger.warning(f"For User {conf_username} with link {link} no E-Mail found")
+        return {"email": email}

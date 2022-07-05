@@ -211,43 +211,41 @@ class TaskReporting:
         overdue_stmt = ""
         date_stmt = ""
 
+        # We're always interested in open tasks - never in done or disappeared tasks
+        where_stmt = "WHERE tasks.is_done = 0"
+
         if filter_companies:
-            where_stmt = "WHERE"
-            company_stmt = "conf_users.company IN (" + ', '.join('"{}"'.format(t) for t in filter_companies) + ")"
+            company_stmt = "AND conf_users.company IN (" + ', '.join('"{}"'.format(t) for t in filter_companies) + ")"
 
         if filter_spaces:
             space_stmt = "AND pages.space IN (" + ', '.join('"{}"'.format(t) for t in filter_spaces) + ")"
-            if where_stmt == "":
-                where_stmt = "WHERE"
-                space_stmt = "pages.space IN (" + ', '.join('"{}"'.format(t) for t in filter_spaces) + ")"
 
         if filter_overdue:
-            overdue_stmt = "AND tasks.is_done = 0 AND tasks.reminder_date < DATE()"
-            if where_stmt == "":
-                where_stmt = "WHERE"
-                overdue_stmt = "tasks.is_done = 0 AND tasks.reminder_date < DATE()"
+            overdue_stmt = "AND tasks.reminder_date < DATE()"
 
         if filter_date == 2:
             date_stmt = "AND tasks.due_date IS NOT NULL"
-            if where_stmt == "":
-                where_stmt = "WHERE"
-                date_stmt = "tasks.due_date IS NOT NULL"
 
         if filter_date == 1:
             date_stmt = "AND tasks.due_date IS NULL"
-            if where_stmt == "":
-                where_stmt = "WHERE"
-                date_stmt = "tasks.due_date IS NULL"
-        
 
-        stmt =f"""
-            SELECT conf_users.display_name as name, Count(tasks.internal_id) as task_count,
-            Count(tasks.due_date < CURRENT_TIMESTAMP and tasks.is_done == 0) as overdue_count
+        stmt = f"""
+         select total_sum.name, total, coalesce(overdue, 0) as overdue
+       from (select conf_users.display_name as name, count(tasks.internal_id) as total
+            from tasks join conf_users on conf_users.id = tasks.user_id
+                join pages on pages.internal_id = tasks.page_link
+                where tasks.is_done = 0
+                {company_stmt} {space_stmt} {overdue_stmt} {date_stmt}
+            group by conf_users.id) as total_sum
+    left outer join (select conf_users.display_name as name, count(tasks.internal_id) as overdue
             from tasks join conf_users on conf_users.id = tasks.user_id
             JOIN pages ON pages.internal_id = tasks.page_link
-            {where_stmt} {company_stmt} {space_stmt} {overdue_stmt} {date_stmt}
-            group by conf_users.id
-            """
+            WHERE tasks.is_done = 0
+              and julianday(tasks.due_date) < julianday(CURRENT_TIMESTAMP)
+              {company_stmt} {space_stmt} {overdue_stmt} {date_stmt}
+            GROUP BY conf_users.id) as overdue_sum
+    on overdue_sum.name = total_sum.name
+        """
 
         q = session.execute(stmt)
 

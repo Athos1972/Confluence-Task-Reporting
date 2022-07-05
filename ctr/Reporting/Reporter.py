@@ -207,7 +207,6 @@ class TaskReporting:
 
         company_stmt = ""
         space_stmt = ""
-        where_stmt = ""
         overdue_stmt = ""
         date_stmt = ""
 
@@ -229,22 +228,25 @@ class TaskReporting:
         if filter_date == 1:
             date_stmt = "AND tasks.due_date IS NULL"
 
+        # This is a bit tricky. Didn't work differently in SQLite.
+        # We select count(all tasks), then count(overdue_tasks) and join those two results together.
         stmt = f"""
          select total_sum.name, total, coalesce(overdue, 0) as overdue
        from (select conf_users.display_name as name, count(tasks.internal_id) as total
             from tasks join conf_users on conf_users.id = tasks.user_id
                 join pages on pages.internal_id = tasks.page_link
-                where tasks.is_done = 0
+            where tasks.is_done = 0
                 {company_stmt} {space_stmt} {overdue_stmt} {date_stmt}
             group by conf_users.id) as total_sum
-    left outer join (select conf_users.display_name as name, count(tasks.internal_id) as overdue
+        left outer join 
+            (select conf_users.display_name as name, count(tasks.internal_id) as overdue
             from tasks join conf_users on conf_users.id = tasks.user_id
             JOIN pages ON pages.internal_id = tasks.page_link
             WHERE tasks.is_done = 0
               and julianday(tasks.due_date) < julianday(CURRENT_TIMESTAMP)
               {company_stmt} {space_stmt} {overdue_stmt} {date_stmt}
             GROUP BY conf_users.id) as overdue_sum
-    on overdue_sum.name = total_sum.name
+         on overdue_sum.name = total_sum.name
         """
 
         q = session.execute(stmt)

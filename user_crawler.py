@@ -26,10 +26,12 @@ if __name__ == '__main__':
             # Attributes like E-Mail-Address are not expandable/received in the member-API-Call, so we must call
             # again (this time for each user_tasks) to receive those details.
             # As this data tends to be static don't do this during each crawl.
-            logger.debug(f"Getting further details for user_tasks {conf_user['username']}")
+            logger.debug(f"Getting further details for user_tasks {conf_user['username']}. E-Mail was not filled")
             conf_details = crawler.read_userdetails_for_user(conf_user["username"])
             for k, v in conf_details.items():
                 conf_user[k] = v
+        elif q:
+            conf_user["email"] = q.email
 
         new_user = UserWrapper(confluence_name=conf_user.get('username'),
                                confluence_userkey=conf_user.get('userKey'),

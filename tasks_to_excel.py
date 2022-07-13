@@ -13,7 +13,8 @@ def execute():
     df = reporter.get_tasks_view()
     # If we were started with CLI-Parameter = "OO" then we want only overdue values
     if global_config.get_config("ONLY_OVERDUE", default_value=False):
-        df = df.drop(df[df["Due"] < date.today()].index)
+        df = df.drop(df[df["Due"] > date.today()].index)
+        df = df.dropna(subset=['Due'])
 
     df = df.drop(['task_internal_id'], axis=1)
 
@@ -22,6 +23,7 @@ def execute():
 
     Util.write_pd_to_excel(file_name=file_name, sheetname=sheetname, dataframe=df)
     print(f"File {file_name} created.")
+
 
 if __name__ == '__main__':
     execute()

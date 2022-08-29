@@ -46,7 +46,7 @@ class Config(metaclass=Singleton):
         Appends CLI Arguments to Config
         :return: Nothing
         """
-        parser = ArgumentParser(description="Call CTR modules", exit_on_error=False)
+        parser = ArgumentParser(description="Call CTR modules")
         parser.exit_on_error = False
         parser.add_argument('-OUWT', '--onlyUserWithTasks',
                             help="Run user_crawler.py only for Users who had already tasks")

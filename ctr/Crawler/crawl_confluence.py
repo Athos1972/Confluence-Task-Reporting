@@ -556,7 +556,7 @@ class CrawlConfluence:
     def read_userdetails_for_user(self, conf_username) -> dict:
         """
         Find additional user parameters from additional call to Confluence
-        :param conf_username: Confluence User name
+        :param conf_username: Confluence Username
         :return: Dictionary of additional attributes for this user
         """
         try:
@@ -568,6 +568,9 @@ class CrawlConfluence:
             sleep(self.sleep_between_tasks)
         except ConnectionError as ex:
             logger.error(f"Connection-Error during fetching user_tasks-details of user_tasks {conf_username}: {ex}")
+            return {}
+        except Exception as ex:
+            logger.error(f"Unknown Error during fetching user_tasks-details of user_task {conf_username}: {ex}")
             return {}
         # This call should work but doesn't.
         # result = self.instance.get_user_details_by_username(username=conf_username,

@@ -30,6 +30,8 @@ if __name__ == '__main__':
             conf_details = crawler.read_userdetails_for_user(conf_user["username"])
             for k, v in conf_details.items():
                 conf_user[k] = v
+        else:
+            conf_user["email"] = q.email
 
         new_user = UserWrapper(confluence_name=conf_user.get('username'),
                                confluence_userkey=conf_user.get('userKey'),

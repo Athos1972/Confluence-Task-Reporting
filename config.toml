@@ -6,7 +6,7 @@ filename_database = "sqlite:///prod.db?check_same_thread=False"
 log_dir = "logs/"
 
 # Duration in Seconds between each call to Confluence
-sleep_between_crawl_tasks = 1.5
+sleep_between_crawl_tasks = 0.5
 
 # Name of the logger:
 logger_name = "CONFTASK"

@@ -2,9 +2,9 @@ atlassian-python-api>=3.25.0
 BeautifulSoup4>=4.11.1
 dash>=2.5.1
 dash-bootstrap-components>=1.1.0
-pandas>=1.4.2
+pandas==2.1.0
 python-dotenv>=0.20.0
-sqlalchemy>=1.4.37
+sqlalchemy==1.4.37
 toml>=0.10.2
 xlsxwriter>=3.0.3
 urllib3~=1.26.12

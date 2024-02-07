@@ -56,5 +56,5 @@ class Util:
                 worksheet.set_column(spalten_nummer, spalten_nummer, max_len)  # set column width
             except KeyError as ex:
                 logger.warning(f"Weird things during formatting of XLS. Error was: {ex}")
-        writer.save()
+        writer.close()
         return True

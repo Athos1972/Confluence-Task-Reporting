@@ -3,7 +3,6 @@ from atlassian.errors import ApiError
 from ctr.Util import global_config, logger, timeit
 from os import environ
 from datetime import datetime, date
-from ctr.Util.Util import Util as UUtil
 import requests
 import sys
 from bs4 import BeautifulSoup
@@ -66,7 +65,8 @@ class UserWrapper(Wrapper):
             found_user[0].email = self.email or "unknown"
             found_user[0].display_name = self.display_name
             found_user[0].conf_userkey = self.confluence_userkey
-            logger.debug(f"user_tasks {found_user[0].conf_name} existed. Updated last_crawled-Timestamp, E-Mail and Name")
+            logger.debug(f"user_tasks {found_user[0].conf_name} existed. "
+                         f"Updated last_crawled-Timestamp, E-Mail and Name")
             self.session.commit()
             return found_user[0].id
         else:
@@ -86,8 +86,8 @@ class TaskWrapper(Wrapper):
     Class to interface a Task from external sources (only Confluence) with Database-Level
     """
 
-    def __init__(self, username, global_id, task_id, page_link, page_name, task_description, db_connection: SqlConnector = None,
-                 is_done: bool = False, reminder_date=None):
+    def __init__(self, username, global_id, task_id, page_link, page_name, task_description,
+                 db_connection: SqlConnector = None, is_done: bool = False, reminder_date=None):
         super().__init__(db_connection=db_connection)
         self.username = username
         self.global_id = global_id
@@ -309,7 +309,9 @@ class TaskWrapper(Wrapper):
             page.page_id = self.__find_ajs_values_in_string("ajs-page-id", result.text)
             page.space = self.__find_ajs_values_in_string("ajs-space-key", result.text)
 
-        if page.space[0] == "~":
+        if not page.space:
+            logger.info(f"Ignoring page {page.page_name} because page is weird and doesn't have a space")
+        elif page.space[0] == "~":
             logger.info(f"Ignoring page {page.page_name} because space is personal space {page.space}")
             return None       # Don't accept personal spaces
 
@@ -346,6 +348,10 @@ class TaskWrapper(Wrapper):
                 pass
             try:
                 return datetime.strptime(confluence_date, "%Y-%m-%d").date()  # 2022-05-25
+            except ValueError:
+                pass
+            try:
+                return datetime.strptime(confluence_date, "%d.%m.%Y").date()  # 09.03.2023
             except ValueError:
                 logger.critical(f"Dateformat unknown: {confluence_date}. Is it a date??")
                 return None
@@ -403,7 +409,8 @@ class CrawlConfluence:
 
     def recrawl_task(self, page_id, task_id):
         """
-        All tries to work with https://developer.atlassian.com/cloud/confluence/rest/api-group-inline-tasks/#api-wiki-rest-api-inlinetasks-search-get
+        All tries to work with
+        https://developer.atlassian.com/cloud/confluence/rest/api-group-inline-tasks/#api-wiki-rest-api-inlinetasks-search-get
         and /rest/inlinetasks/1/task/ did not work out.
         # doesn't work: url = f"{self.confluence_url}/rest/inlinetasks/1/task/{page_id}/{task_id}"
 
@@ -486,27 +493,25 @@ class CrawlConfluence:
         """
         results_found = []
         found_entries = True
-        original_start_number = start
         retry_count = 0
-        lJson = ""
 
         while found_entries:
             new_url = f'{url}?{limit_tag}={limit}&{start_tag}={start}{url_append}'
 
             if retry_count >= 4:
                 logger.critical(f"Errors happened. Cant' catch url {new_url}. Aborting this crawl")
-                found_entries=False
+                found_entries = False
                 continue
 
             try:
                 response = self.session.get(new_url)
                 sleep(self.sleep_between_tasks)
-            except requests.HTTPError as ex:
+            except requests.HTTPError:
                 logger.debug(f"HTTP error  for URL {new_url}. retry_count = {retry_count}. Retrying...")
                 retry_count += 1
                 sleep(1)
                 continue
-            except requests.ConnectionError as ex:
+            except requests.ConnectionError:
                 logger.debug(f"Connection error for URL {new_url}. retry_count = {retry_count}. Retrying...")
                 retry_count += 1
                 sleep(1)
@@ -520,12 +525,12 @@ class CrawlConfluence:
             retry_count = 0
 
             if response.status_code < 300:
-                lJson = response.json()
+                l_json = response.json()
                 # OK. That's a keen assumption but works so far: in the Respons there is only ONE List-Object. Calleer
                 # is interested in all entries from this list-object.
                 # E.g. when we call URL to list Users or Pages the name of the list (= "k") might be "Users" or "Pages"
                 # while we find the list in "v". We add all entries from this list (usually dict's) to results_found
-                for (k, v) in lJson.items():
+                for (k, v) in l_json.items():
                     if isinstance(v, list):
                         logger.debug(f"Received {len(v)} entries from server.")
                         results_found.extend(v)
@@ -542,7 +547,7 @@ class CrawlConfluence:
             else:
                 start += limit
 
-            if len(results_found) >= (max_entries):
+            if len(results_found) >= max_entries:
                 # Exit when we received max_entries_users entries (+ Start-value ;-) )
                 break
 
@@ -581,7 +586,7 @@ class CrawlConfluence:
         # (if maintained)
         trigger_text = '<span  id="email" class="field-value">'
         start_pos = text.find(trigger_text)+len(trigger_text)
-        email = text[start_pos:result.text.find("</span>",start_pos)]
+        email = text[start_pos:result.text.find("</span>", start_pos)]
         if not email:
             logger.warning(f"For User {conf_username} with link {link} no E-Mail found")
         return {"email": email}

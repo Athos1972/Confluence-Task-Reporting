@@ -15,12 +15,12 @@ if __name__ == '__main__':
     Util.load_env_file()
     crawler = CrawlConfluence()
     start = 0
-    max_entries = 2000
+    max_entries = 2500
     new_users = []
     conf_users = crawler.crawl_users(limit=50, max_entries=max_entries, start=start)
     for conf_user in conf_users:
         q = session.query(User).filter(User.conf_name == conf_user.get('username')).first()
-        if not q or not "@" in q.email:
+        if not q or "@" not in str(q.email):
             if not q:
                 new_users.append(conf_user)
             # Attributes like E-Mail-Address are not expandable/received in the member-API-Call, so we must call

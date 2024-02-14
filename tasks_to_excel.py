@@ -29,7 +29,6 @@ def execute():
     # Temporäre Spalte wieder killen
     df.drop('Due_DT', axis=1, inplace=True)
 
-
     file_name = f"task_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     sheetname = "Confluence-Tasks"
 

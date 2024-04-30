@@ -190,6 +190,11 @@ class TaskWrapper(Wrapper):
         :param new_task:
         :return:
         """
+        # Initialize Dates as for instance there might not be a second date anymore.
+        # !SIC keep sequence to initialize all 3 fields properly!
+        new_task.second_date = None
+        new_task.reminder_date = None
+        new_task.due_date = None
         # These attributes may have changed since last crawl:
         new_task.reminder_date = self._convert_confluence_dateformat_to_date(self.reminder_date)
         new_task.is_done = self.is_done
@@ -586,6 +591,9 @@ class CrawlConfluence:
         # (if maintained)
         trigger_text = '<span  id="email" class="field-value">'
         start_pos = text.find(trigger_text)+len(trigger_text)
+        if start_pos <= len(trigger_text):
+            logger.warning(f"For User {conf_username} with link {link} no E-Mail found")
+            return {"email": "unknown"}
         email = text[start_pos:result.text.find("</span>", start_pos)]
         if not email:
             logger.warning(f"For User {conf_username} with link {link} no E-Mail found")

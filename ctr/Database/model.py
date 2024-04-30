@@ -137,18 +137,22 @@ def update_due_date_from_second_date(target: Task, value, oldvalue, initiator):
     :return:
     """
     if not target.reminder_date and value:
+        # Wie kann das sein, dass wir kein Reminder-date haben aber ein zweites Datum??
         target.due_date = value
         return target
     if value:
         try:
-            if value < target.reminder_date:
+            # Wenn das Fälligkeitsdatum größer als das Reminder-Datum ist, dann soll das Due-Date
+            # vom Fälligkeitsdatum ziehen
+            if value > target.reminder_date:
                 target.due_date = value
                 return target
         except TypeError:
             logger.critical(f"Received {value}. Target.reminder_date was {target.reminder_date}. Didn't do anything.")
             return target
-    if not value:
-        target.due_date = target.reminder_date
+    # if not value:
+        # Das müsste eh schon das Reminder_date sein. Wird ja vorher schon gesetzt.
+    #     target.due_date = target.reminder_date
     return target
 
 

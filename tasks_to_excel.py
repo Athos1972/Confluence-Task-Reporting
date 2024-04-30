@@ -24,6 +24,7 @@ def execute():
     # DueDiff-Spalte neu basteln:
     df['Due_DT'] = pd.to_datetime(df['Due'])  # Temporäre Datetime-Spalte (Date geht nicht scheinbar)
     df['DueDiff'] = (datetime.today() - df['Due_DT']).dt.days
+    # DueDate nur für Zukunft im Export betrachten
     df = df[df['DueDiff'] > 0]
 
     # Temporäre Spalte wieder killen

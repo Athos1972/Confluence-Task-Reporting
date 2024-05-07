@@ -589,12 +589,13 @@ class CrawlConfluence:
         text = result.text
         # In the HTML-Response we search for this span. Between the <span> and </span> we'll find the E-Mail-Address
         # (if maintained)
-        trigger_text = '<span  id="email" class="field-value">'
+        trigger_text = '<span id="email" class="field-value">'
         start_pos = text.find(trigger_text)+len(trigger_text)
         if start_pos <= len(trigger_text):
             logger.warning(f"For User {conf_username} with link {link} no E-Mail found")
             return {"email": "unknown"}
         email = text[start_pos:result.text.find("</span>", start_pos)]
-        if not email:
+        if not email or "@" not in email:
             logger.warning(f"For User {conf_username} with link {link} no E-Mail found")
+            return {"email": "unknown"}
         return {"email": email}

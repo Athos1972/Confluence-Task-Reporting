@@ -4,10 +4,23 @@ from ctr.Util.Util import Util
 from ctr.Util import global_config, timeit
 from datetime import datetime, date
 import pandas as pd
+import numpy as np
 
 
 @timeit
 def execute():
+    def calculate_days(due_date):
+        if pd.isna(due_date):
+            return 0
+        today = pd.Timestamp(date.today())
+        try:
+            diff = (today - pd.Timestamp(due_date)).days
+            return diff
+        except OverflowError:
+            # Handle the case where date difference is too large
+            return 0
+
+    # Apply the function to each date in the 'Due_DT' column
     db_connection = SqlConnector()
     Util.load_env_file()
     reporter = TaskReporting(db_connection=db_connection)
@@ -21,9 +34,11 @@ def execute():
     # Nur auf unsere Spaces filtern
     allowed_values = ["PRGWgS4H", "iniPFM76", "S4SC"]
     df = df[df['Space'].isin(allowed_values)]
-    # DueDiff-Spalte neu basteln:
-    df['Due_DT'] = pd.to_datetime(df['Due'])  # Temporäre Datetime-Spalte (Date geht nicht scheinbar)
-    df['DueDiff'] = (datetime.today() - df['Due_DT']).dt.days
+    # Convert 'Due' to datetime and extract date
+    df['Due_DT'] = pd.to_datetime(df['Due'], errors='coerce').dt.date
+    # Calculate the difference in days
+    df['DueDiff'] = df['Due_DT'].apply(calculate_days)
+
     # DueDate nur für Zukunft im Export betrachten
     df = df[df['DueDiff'] > 0]
 

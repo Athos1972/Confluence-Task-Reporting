@@ -1,5 +1,7 @@
 from atlassian import Confluence
 from atlassian.errors import ApiError
+from sqlalchemy.exc import IntegrityError
+
 from ctr.Util import global_config, logger, timeit
 from os import environ
 from datetime import datetime, date
@@ -275,7 +277,13 @@ class TaskWrapper(Wrapper):
             if not page:
                 return None
             subquery_session.add(page)
-            subquery_session.commit()
+            try:
+                subquery_session.commit()
+            except IntegrityError:
+                logger.error(f"IntegrityError while trying to add page {page.page_name} to database. "
+                             f"Probably a duplicate page.")
+                subquery_session.rollback()
+                return None # We can't work with this page
             new_task.page_link = page.internal_id
         else:
             new_task.page_link = new_task.page_link.internal_id
@@ -301,11 +309,19 @@ class TaskWrapper(Wrapper):
             # check in other installations: This call looks to take at least twice as long as the call via requests
             # (in the else-Clause) even though we say "expand=None".
             page.page_id = page.page_link[page.page_link.find("=") + 1:]
-            try:
-                page_details = self.confluence_instance.get_page_by_id(page_id=page.page_id, expand=None)
-                page.space = page_details["space"].get("key")
-            except ApiError:
-                pass
+            retry_count = 1
+            while retry_count < 5:
+                try:
+                    page_details = self.confluence_instance.get_page_by_id(page_id=page.page_id, expand=None)
+                    page.space = page_details["space"].get("key")
+                    retry_count = 99
+                except ApiError:
+                    pass
+                except Exception as e:
+                    logger.info(f"Error {e} while trying to get space from page {page.page_name} via API. "
+                                f"Retry {retry_count}")
+                    retry_count += 1
+                    sleep(1)
         else:
             # Here we should add a header-directive to session-object to only transmit the first 10000 characters
             self._get_confluence_crawler_instance()
@@ -373,7 +389,7 @@ class CrawlConfluence:
         self.session.auth = (environ.get("CONF_USER"), environ.get("CONF_PWD"))
         self.confluence_url = global_config.get_config('CONF_BASE_URL', optional=False)
         # In case you want to not strain system performance too much you can add sleep-duration in seconds in config
-        self.sleep_between_tasks = global_config.get_config('sleep_between_crawl_tasks', default_value=0)
+        self.sleep_between_tasks = global_config.get_config('sleep_between_crawl_tasks', default_value=0.5)
 
     def get_confluence_page_via_requests(self, page_name):
         """
@@ -393,6 +409,8 @@ class CrawlConfluence:
         url = f"{self.confluence_url}/rest/api/group/confluence-users/member"
 
         current_confluence_users = self.__repeated_get(url, limit=limit, max_entries=max_entries, start=start)
+
+        logger.info(f"Received a list of {len(current_confluence_users)} users from Confluence.")
 
         return current_confluence_users
 

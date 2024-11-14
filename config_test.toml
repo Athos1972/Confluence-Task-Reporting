@@ -1,6 +1,9 @@
 
 filename_database = "sqlite:///testdatabase.db?check_same_thread=False"
 
+# allowed spaces to export from during tasks_to_excel.py
+allowed_spaces = ["space1", "Space12"]
+
 # Full path to where the logfiles shall be stored or empty
 log_dir = "logs/"
 
@@ -9,3 +12,4 @@ sleep_between_crawl_tasks = 1.5
 
 # Name of the logger:
 logger_name = "CONFTASK"
+

@@ -4,7 +4,7 @@ from ctr.Util.Util import Util
 from ctr.Util import global_config, timeit
 from datetime import datetime, date
 import pandas as pd
-import numpy as np
+import sys
 
 
 @timeit
@@ -32,12 +32,21 @@ def execute():
     df = df.drop(['task_internal_id'], axis=1)
 
     # Nur auf unsere Spaces filtern
-    allowed_values = ["PRGWgS4H", "iniPFM76", "S4SC"]
+    allowed_values = []
+    if global_config.get_config("allowed_spaces", optional=False):
+        allowed_values = global_config.get_config("allowed_spaces", optional=False)
+    else:
+        sys.exit("allowed_spaces from config file not found. Please check config file.")
+
     df = df[df['Space'].isin(allowed_values)]
     # Convert 'Due' to datetime and extract date
     df['Due_DT'] = pd.to_datetime(df['Due'], errors='coerce').dt.date
     # Calculate the difference in days
     df['DueDiff'] = df['Due_DT'].apply(calculate_days)
+
+    # In der Spalte "Page" steht nur der Rumpf-Link. Der soll mit
+    # global_config.get_config('CONF_BASE_URL', optional=False) kombiniert werden
+    df['Page'] = global_config.get_config('CONF_BASE_URL', optional=False) + df['Page']
 
     # DueDate nur für Zukunft im Export betrachten
     df = df[df['DueDiff'] > 0]

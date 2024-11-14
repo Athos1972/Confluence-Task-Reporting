@@ -64,7 +64,7 @@ for i in range(1501):
 session.commit()
 
 print("Creating tasks")
-for i in range(3000):
+for i in range(5000):
     page_link = randint(0, 1500)
     p = session.query(User).filter(User.id == randint(0, 1500)).first()
     task = Task(

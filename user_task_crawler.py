@@ -48,7 +48,7 @@ if __name__ == '__main__':
     session = db_connection.get_session()
     subsession = db_connection.get_session()
     limit = 20                     # page size
-    max_entries_users = 3000
+    max_entries_users = 5000
     max_entries_tasks = 900
     # Selektion of Users based on last_recrawled
     if global_config.get_config("OUWT", optional=False):

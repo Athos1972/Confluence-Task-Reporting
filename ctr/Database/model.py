@@ -58,6 +58,7 @@ class User(Base):
         return f"User(id={self.id!r}, Name={self.conf_name!r} E-Mail={self.email!r}"
 
     def __init__(self, conf_name, conf_userkey, email, display_name, last_crawled=None, company="unknown"):
+        super().__init__()
         self.conf_name = conf_name
         self.conf_userkey = conf_userkey
         # Needs to be before email so that it will be overwritten with proper value
@@ -68,7 +69,7 @@ class User(Base):
 
 
 @event.listens_for(User.email, "set")
-def update_User_email(target, value, oldvalue, initiator):
+def update_user_email(target, value, oldvalue, initiator):
     """
     Listens to changes to "User.email" and writes company-field from these changes.
     :param target: the User-class
@@ -107,6 +108,7 @@ class Task(Base):
     page = relationship("Page", backref="tasks")
 
     def __init__(self, global_id=global_id):
+        super().__init__()
         self.global_id = global_id
 
     def __repr__(self):

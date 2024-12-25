@@ -15,7 +15,7 @@ if __name__ == '__main__':
     Util.load_env_file()
     crawler = CrawlConfluence()
     start = 0
-    max_entries = 2500
+    max_entries = 5000
     new_users = []
     conf_users = crawler.crawl_users(limit=50, max_entries=max_entries, start=start)
     for conf_user in conf_users:

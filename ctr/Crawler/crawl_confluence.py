@@ -65,8 +65,9 @@ class UserWrapper(Wrapper):
             # User exists already in Database.
             found_user[0].last_crawled = datetime.now()
             found_user[0].email = self.email or "unknown"
-            found_user[0].display_name = self.display_name
-            found_user[0].conf_userkey = self.confluence_userkey
+            found_user[0].display_name = self.display_name   # Could have changed their name (Marriage, divorce, etc.)
+            if self.confluence_userkey:
+                found_user[0].conf_userkey = self.confluence_userkey
             logger.debug(f"user_tasks {found_user[0].conf_name} existed. "
                          f"Updated last_crawled-Timestamp, E-Mail and Name")
             self.session.commit()
@@ -331,7 +332,7 @@ class TaskWrapper(Wrapper):
             page.space = self.__find_ajs_values_in_string("ajs-space-key", result.text)
 
         if not page.space:
-            logger.info(f"Ignoring page {page.page_name} because page is weird and doesn't have a space")
+            logger.warning(f"Ignoring page {page.page_name} because page is weird and doesn't have a space")
         elif page.space[0] == "~":
             logger.info(f"Ignoring page {page.page_name} because space is personal space {page.space}")
             return None       # Don't accept personal spaces
@@ -409,6 +410,65 @@ class CrawlConfluence:
         url = f"{self.confluence_url}/rest/api/group/confluence-users/member"
 
         current_confluence_users = self.__repeated_get(url, limit=limit, max_entries=max_entries, start=start)
+        if not current_confluence_users:
+            return self.crawl_users_via_search(limit=limit, max_entries=max_entries, start=start)
+        logger.info(f"Received a list of {len(current_confluence_users)} users from Confluence.")
+
+        return current_confluence_users
+
+    def crawl_users_via_search(self, limit=10, max_entries=100, start=0):
+        """
+        Get a List of Users from Confluence. Then read additional details for each user_tasks.
+        :return: List of Confluence-Users as dict.
+        """
+        logger.debug(f"Starting to crawl max {max_entries} Users in slices of {limit}. Start from {start}")
+        url = f"{self.confluence_url}/rest/api/group/confluence-users/member"
+
+        # The API doesn't work any longer. We need a different approach:
+        "<confluence_url>/dosearchsite.action?cql=type%20in%20(%22user%22)&includeArchivedSpaces=false"
+        "<confluence_url>/dosearchsite.action?cql=type+in+(%22user%22)&startIndex=10"
+
+        url = f"{self.confluence_url}/dosearchsite.action?cql=type+in+(%22user%22)&startIndex={start}"
+        # this URL gives exactly 10 results
+        read_entries = 0
+        retry_count = 0
+        max_retries = 2
+        current_confluence_users = []
+        while read_entries <= max_entries:
+            try:
+                users = self.session.get(url)
+                sleep(self.sleep_between_tasks)
+                page_content = users.text
+                soup = BeautifulSoup(page_content, features="html.parser")
+                # User come like this <a class="search-result-link visitable" href="/<confluence>/display/~NIMDIR" data-type="user">Franzi Huber</a>
+                # We're interested in the part after /display/ and before " data-type="user"
+                users_in_page = soup.find_all("a", class_="search-result-link visitable")
+                for user in users_in_page:
+                    href = user.attrs["href"]
+                    user_name = href[href.rfind("/")+2:]   # +1 to lose the / and +1 to lose the ~
+                    user_display_name = user.text
+                    user_dict = {"username": user_name, "displayName": user_display_name}
+                    user_details = self.instance.get_user_details_by_username(user_name)
+                    user_dict["userKey"] = user_details.get("userKey")
+                    current_confluence_users.append(user_dict)
+                    read_entries += 1
+                    if read_entries >= max_entries:
+                        break
+
+                if not users_in_page:
+                    logger.info("No more users found. Stopping.")
+                    break
+                url = f"{self.confluence_url}/dosearchsite.action?cql=type+in+(%22user%22)&startIndex={read_entries}"
+                logger.info(f"Read {read_entries} users from Confluence. Next URL: {url}")
+                retry_count = 0
+            except ConnectionError as e:
+                logger.error(f"ConnectionError while trying to get users from Confluence with URL {url}. "
+                             f"Error was: {e} Retry.")
+                retry_count += 1
+                if retry_count >= max_retries:
+                    logger.critical("Result won't be complete! Max retries reached. Aborting.")
+                    break
+                sleep(self.sleep_between_tasks)
 
         logger.info(f"Received a list of {len(current_confluence_users)} users from Confluence.")
 

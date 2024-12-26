@@ -5,8 +5,12 @@ filename_database = "sqlite:///prod.db?check_same_thread=False"
 # Full path to where the logfiles shall be stored or empty
 log_dir = "logs/"
 
-# Duration in Seconds between each call to Confluence
-sleep_between_crawl_tasks = 0.5
+# Duration in Seconds between each call to Confluence. Set to 0 to disable and enable parallel processing
+sleep_between_crawl_tasks = 0
+
+# Number of parallel processes to run. Works only if sleep_between_crawl_tasks is set to 0 or commented out
+workers_during_daytime = 5
+workers_during_nighttime = 15
 
 # Name of the logger:
 logger_name = "CONFTASK"

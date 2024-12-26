@@ -51,8 +51,7 @@ def select_options(selected_company, selected_space, radio_selector):
 
     :param selected_company:
     :param selected_space:
-    :param checked_overdue:
-    :param checked_date
+    :param radio_selector:
     :return:
     """
     global ACTIVE_ROUTE

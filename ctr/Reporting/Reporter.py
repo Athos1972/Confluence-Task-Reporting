@@ -186,7 +186,7 @@ class TaskReporting:
         return dataframe
 
     @catch_sql_error
-    def tasks_stats_by_space(self, filter_companies=[], filter_spaces=[]):
+    def tasks_stats_by_space(self, filter_companies: list = None, filter_spaces: list = None):
         session = self.db_connection.get_session()
         q = session.query(func.sum(Statistics.overdue), func.sum(Statistics.total), Statistics.stat_date). \
             join(User). \
@@ -202,12 +202,11 @@ class TaskReporting:
         return pd.DataFrame(columns=['overdue', 'total', 'date'], data=list(q))
 
     @catch_sql_error
-    def tasks_stats_by_user(self, filter_companies=[], filter_spaces=[], filter_overdue=False, filter_date=0):
+    def tasks_stats_by_user(self, filter_companies: list = None, filter_spaces: list = None, filter_overdue=False, filter_date=0):
         session = self.db_connection.get_session()
 
         company_stmt = ""
         space_stmt = ""
-        where_stmt = ""
         overdue_stmt = ""
         date_stmt = ""
 
@@ -234,13 +233,13 @@ class TaskReporting:
        from (select conf_users.display_name as name, count(tasks.internal_id) as total
             from tasks join conf_users on conf_users.id = tasks.user_id
                 join pages on pages.internal_id = tasks.page_link
-                where tasks.is_done = 0
+                {where_stmt}
                 {company_stmt} {space_stmt} {overdue_stmt} {date_stmt}
             group by conf_users.id) as total_sum
     left outer join (select conf_users.display_name as name, count(tasks.internal_id) as overdue
             from tasks join conf_users on conf_users.id = tasks.user_id
             JOIN pages ON pages.internal_id = tasks.page_link
-            WHERE tasks.is_done = 0
+            {where_stmt}
               and julianday(tasks.due_date) < julianday(CURRENT_TIMESTAMP)
               {company_stmt} {space_stmt} {overdue_stmt} {date_stmt}
             GROUP BY conf_users.id) as overdue_sum

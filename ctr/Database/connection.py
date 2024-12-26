@@ -9,13 +9,13 @@ class SqlConnector:
     """
     Provides the Connection to the database and offers get_session to execute sqlite operations with
     """
-    def __init__(self, file=None, *args, **kwargs):
+    def __init__(self, file=None):
         self.engine = None
         if not file:
             file = global_config.get_config("filename_database", optional=False)
         self.file = str(file)
 
-    def get_engine(self, *args, **kwargs):
+    def get_engine(self, **kwargs):
         if not self.engine:
             # Check, if the database exists already
             file_exists = Path(self.file.replace("sqlite:///", "").replace("?check_same_thread=False","")).exists()

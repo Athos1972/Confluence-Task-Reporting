@@ -189,6 +189,7 @@ class Page(Base):
     last_crawled = Column(DateTime, onupdate=func.now(), nullable=False, index=True)
 
     def __init__(self, page_link, page_name):
+        super().__init__()
         self.page_link = page_link
         self.page_name = page_name
         self.last_crawled = datetime.now()
@@ -211,6 +212,7 @@ class Statistics(Base):
     total = Column(Integer, nullable=False)
 
     def __init__(self, space, date, user_id, overdue, total):
+        super().__init__()
         self.space = space
         self.stat_date = date
         self.user_id = user_id

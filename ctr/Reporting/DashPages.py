@@ -1,10 +1,5 @@
 import dash_bootstrap_components as dbc
 from dash import html, dcc
-from datetime import date
-
-from ctr.Database.connection import SqlConnector
-from ctr.Reporting import Reporter as Reporter
-from ctr.Util import logger, global_config
 
 
 class DashPages:

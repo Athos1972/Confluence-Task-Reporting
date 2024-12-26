@@ -422,7 +422,6 @@ class CrawlConfluence:
         :return: List of Confluence-Users as dict.
         """
         logger.debug(f"Starting to crawl max {max_entries} Users in slices of {limit}. Start from {start}")
-        url = f"{self.confluence_url}/rest/api/group/confluence-users/member"
 
         # The API doesn't work any longer. We need a different approach:
         "<confluence_url>/dosearchsite.action?cql=type%20in%20(%22user%22)&includeArchivedSpaces=false"
